@@ -262,10 +262,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const investmentTarget = Number(budget?.investment_target ?? 0);
   const reserveTarget = Number(budget?.reserve_target ?? 0);
 
-  const remaining = Math.max(expenseLimit - totals.expense, 0);
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const remainingDays = Math.max(daysInMonth - now.getDate() + 1, 1);
-  const dailyAllowance = remainingDays > 0 ? remaining / remainingDays : 0;
+  
+  // Calculate daily allowance based on budget: (Income target - Expenses already made - Investment target) / remaining days
+  const budgetRemaining = incomeTarget - totals.expense - investmentTarget;
+  const dailyAllowance = remainingDays > 0 ? Math.max(budgetRemaining / remainingDays, 0) : 0;
+  
   const saved = totals.income - totals.expense - totals.investmentContribution;
 
   // Budget progress calculations
@@ -469,10 +472,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <CardTitle className="text-emerald-600">{formatCurrency(totals.investmentContribution, 'BRL')}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className={remaining > 0 ? 'border-emerald-200/60 bg-emerald-50/40' : 'border-rose-200/60 bg-rose-50/40'}>
+        <Card className={dailyAllowance > 0 ? 'border-emerald-200/60 bg-emerald-50/40' : 'border-rose-200/60 bg-rose-50/40'}>
           <CardHeader>
-            <CardDescription>Limite diário</CardDescription>
-            <CardTitle className={remaining > 0 ? 'text-emerald-600' : 'text-rose-600'}>
+            <CardDescription>Limite diário disponível</CardDescription>
+            <CardTitle className={dailyAllowance > 0 ? 'text-emerald-600' : 'text-rose-600'}>
               {formatCurrency(dailyAllowance, 'BRL')}
             </CardTitle>
           </CardHeader>
