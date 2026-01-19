@@ -44,7 +44,7 @@ type TransactionImportSheetProps = {
 type ImportRowCategoryComboboxProps = {
   row: ImportRow;
   categoryOptions: { value: string; label: string }[];
-  onCategoryChange: (rowId: string, categoryId: string) => void;
+  onCategoryChange: (rowId: number, categoryId: string) => void;
 };
 
 function ImportRowCategoryCombobox({ row, categoryOptions, onCategoryChange }: ImportRowCategoryComboboxProps) {
