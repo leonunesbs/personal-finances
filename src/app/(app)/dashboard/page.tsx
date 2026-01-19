@@ -307,7 +307,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const hasBudget = incomeTarget > 0 || expenseLimit > 0 || investmentTarget > 0 || reserveTarget > 0;
 
-  const today = new Date();
   const todayStart = new Date(today);
   todayStart.setHours(0, 0, 0, 0);
   const recurringWindowEnd = addDays(todayStart, 30);
