@@ -548,57 +548,57 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <CarouselItem key={card.cardId} className="basis-full">
                       <div className="grid gap-4 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)] lg:items-start">
                         <div
-                          className={`relative mx-auto aspect-[1.586] w-full max-w-[480px] overflow-hidden rounded-2xl border border-white/40 p-5 text-white shadow-sm ${card.theme.gradient}`}
+                          className={`relative mx-auto min-h-[240px] sm:aspect-[1.586] w-full max-w-[480px] overflow-visible sm:overflow-hidden rounded-xl sm:rounded-2xl border border-white/40 p-4 sm:p-4 md:p-5 text-white shadow-sm ${card.theme.gradient}`}
                         >
                           <div
                             className={`absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl ${card.theme.overlay}`}
                           />
-                          <div className="flex items-center justify-between text-sm text-white/80">
-                            <span>Cartão</span>
-                            <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm text-white/80">
+                            <span className="text-[10px] sm:text-sm">Cartão</span>
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                               {card.brand && (
                                 <Image
                                   src={card.brand.src}
                                   alt={card.brand.label}
                                   width={48}
                                   height={20}
-                                  className="h-5 w-auto object-contain"
+                                  className="h-4 sm:h-5 w-auto object-contain"
                                 />
                               )}
-                              <span>{card.name}</span>
+                              <span className="text-xs sm:text-sm truncate max-w-[180px] sm:max-w-none">{card.name}</span>
                             </div>
                           </div>
-                          {card.binLabel && <p className="mt-1 text-xs text-white/70">{card.binLabel}</p>}
+                          {card.binLabel && <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-white/70 truncate">{card.binLabel}</p>}
                           {card.theme.badge && (
                             <span
-                              className={`mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${card.theme.badge.className}`}
+                              className={`mt-1.5 sm:mt-2 inline-flex items-center rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[8px] sm:text-[10px] font-semibold uppercase tracking-wide ${card.theme.badge.className}`}
                             >
                               {card.theme.badge.label}
                             </span>
                           )}
-                          <div className="mt-4 flex items-center justify-between">
+                          <div className="mt-2 sm:mt-4 flex items-center justify-between gap-2">
                             <Image
                               src="/chip.png"
                               alt="Chip"
                               width={64}
                               height={42}
-                              className="h-10 w-auto rounded-md border border-white/30 bg-white/10 px-2 py-1"
+                              className="h-7 sm:h-10 w-auto flex-shrink-0 rounded-md border border-white/30 bg-white/10 px-1 sm:px-2 py-0.5 sm:py-1"
                             />
-                            <div className="text-sm text-white/80">
+                            <div className="text-[11px] sm:text-sm text-white/80 flex-shrink-0">
                               {card.last4 ? `•••• ${card.last4}` : '**** ****'}
                             </div>
                           </div>
-                          <div className="mt-6 space-y-2">
-                            <p className="text-xs uppercase tracking-wider text-white/70">Fatura atual</p>
-                            <p className="text-2xl font-semibold">{formatCurrency(card.outstanding, 'BRL')}</p>
+                          <div className="mt-3 sm:mt-6 space-y-1 sm:space-y-2">
+                            <p className="text-[9px] sm:text-xs uppercase tracking-wider text-white/70">Fatura atual</p>
+                            <p className="text-lg sm:text-2xl font-semibold break-words leading-tight">{formatCurrency(card.outstanding, 'BRL')}</p>
                           </div>
-                          <div className="mt-4">
-                            <div className="h-2 w-full rounded-full bg-white/20">
-                              <div className="h-2 rounded-full bg-white/80" style={{ width: `${card.usage * 100}%` }} />
+                          <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
+                            <div className="h-1.5 sm:h-2 w-full rounded-full bg-white/20">
+                              <div className="h-1.5 sm:h-2 rounded-full bg-white/80" style={{ width: `${card.usage * 100}%` }} />
                             </div>
-                            <div className="mt-2 flex items-center justify-between text-xs text-white/70">
-                              <span>Limite: {formatCurrency(card.limitAmount, 'BRL')}</span>
-                              <span>{Math.round(card.usage * 100)}%</span>
+                            <div className="flex items-center justify-between gap-3 text-[9px] sm:text-xs text-white/70">
+                              <span className="truncate min-w-0 flex-1">Limite: {formatCurrency(card.limitAmount, 'BRL')}</span>
+                              <span className="flex-shrink-0 font-medium">{Math.round(card.usage * 100)}%</span>
                             </div>
                           </div>
                         </div>
@@ -633,55 +633,55 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     className="grid gap-4 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)] lg:items-start"
                   >
                     <div
-                      className={`relative mx-auto aspect-[1.586] w-full max-w-[480px] overflow-hidden rounded-2xl border border-white/40 p-5 text-white shadow-sm ${card.theme.gradient}`}
+                      className={`relative mx-auto min-h-[240px] sm:aspect-[1.586] w-full max-w-[480px] overflow-visible sm:overflow-hidden rounded-xl sm:rounded-2xl border border-white/40 p-4 sm:p-4 md:p-5 text-white shadow-sm ${card.theme.gradient}`}
                     >
                       <div
                         className={`absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl ${card.theme.overlay}`}
                       />
-                      <div className="flex items-center justify-between text-sm text-white/80">
-                        <span>Cartão</span>
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm text-white/80">
+                        <span className="text-[10px] sm:text-sm">Cartão</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                           {card.brand && (
                             <Image
                               src={card.brand.src}
                               alt={card.brand.label}
                               width={48}
                               height={20}
-                              className="h-5 w-auto object-contain"
+                              className="h-4 sm:h-5 w-auto object-contain"
                             />
                           )}
-                          <span>{card.name}</span>
+                          <span className="text-xs sm:text-sm truncate max-w-[180px] sm:max-w-none">{card.name}</span>
                         </div>
                       </div>
-                      {card.binLabel && <p className="mt-1 text-xs text-white/70">{card.binLabel}</p>}
+                      {card.binLabel && <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-white/70 truncate">{card.binLabel}</p>}
                       {card.theme.badge && (
                         <span
-                          className={`mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${card.theme.badge.className}`}
+                          className={`mt-1.5 sm:mt-2 inline-flex items-center rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[8px] sm:text-[10px] font-semibold uppercase tracking-wide ${card.theme.badge.className}`}
                         >
                           {card.theme.badge.label}
                         </span>
                       )}
-                      <div className="mt-4 flex items-center justify-between">
+                      <div className="mt-2 sm:mt-4 flex items-center justify-between gap-2">
                         <Image
                           src="/chip.png"
                           alt="Chip"
                           width={64}
                           height={42}
-                          className="h-10 w-auto rounded-md border border-white/30 bg-white/10 px-2 py-1"
+                          className="h-7 sm:h-10 w-auto flex-shrink-0 rounded-md border border-white/30 bg-white/10 px-1 sm:px-2 py-0.5 sm:py-1"
                         />
-                        <div className="text-sm text-white/80">{card.last4 ? `•••• ${card.last4}` : '**** ****'}</div>
+                        <div className="text-[11px] sm:text-sm text-white/80 flex-shrink-0">{card.last4 ? `•••• ${card.last4}` : '**** ****'}</div>
                       </div>
-                      <div className="mt-6 space-y-2">
-                        <p className="text-xs uppercase tracking-wider text-white/70">Fatura atual</p>
-                        <p className="text-2xl font-semibold">{formatCurrency(card.outstanding, 'BRL')}</p>
+                      <div className="mt-3 sm:mt-6 space-y-1 sm:space-y-2">
+                        <p className="text-[9px] sm:text-xs uppercase tracking-wider text-white/70">Fatura atual</p>
+                        <p className="text-lg sm:text-2xl font-semibold break-words leading-tight">{formatCurrency(card.outstanding, 'BRL')}</p>
                       </div>
-                      <div className="mt-4">
-                        <div className="h-2 w-full rounded-full bg-white/20">
-                          <div className="h-2 rounded-full bg-white/80" style={{ width: `${card.usage * 100}%` }} />
+                      <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
+                        <div className="h-1.5 sm:h-2 w-full rounded-full bg-white/20">
+                          <div className="h-1.5 sm:h-2 rounded-full bg-white/80" style={{ width: `${card.usage * 100}%` }} />
                         </div>
-                        <div className="mt-2 flex items-center justify-between text-xs text-white/70">
-                          <span>Limite: {formatCurrency(card.limitAmount, 'BRL')}</span>
-                          <span>{Math.round(card.usage * 100)}%</span>
+                        <div className="flex items-center justify-between gap-3 text-[9px] sm:text-xs text-white/70">
+                          <span className="truncate min-w-0 flex-1">Limite: {formatCurrency(card.limitAmount, 'BRL')}</span>
+                          <span className="flex-shrink-0 font-medium">{Math.round(card.usage * 100)}%</span>
                         </div>
                       </div>
                     </div>
