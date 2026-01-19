@@ -263,14 +263,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const reserveTarget = Number(budget?.reserve_target ?? 0);
 
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const currentDay = now.getDate();
-  const remainingDays = Math.max(daysInMonth - currentDay + 1, 1);
   
   // Determine if we're viewing current, past, or future month
   const today = new Date();
   const isCurrentMonth = now.getMonth() === today.getMonth() && now.getFullYear() === today.getFullYear();
   const isPastMonth = now < new Date(today.getFullYear(), today.getMonth(), 1);
   const isFutureMonth = now > new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
+  // Calculate remaining days: use actual remaining days only for current month
+  const currentDayInRealMonth = today.getDate();
+  const remainingDays = isCurrentMonth ? Math.max(daysInMonth - currentDayInRealMonth + 1, 1) : daysInMonth;
   
   // Calculate daily allowance based on month type
   let dailyAllowance = 0;
