@@ -1,18 +1,52 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
-import { createAccount, createCard, createCardPayment, createCategory, createTag } from "@/app/(app)/settings/actions";
+import {
+  createAccount,
+  createCard,
+  createCardPayment,
+  createCategory,
+  createTag,
+  deleteCategory,
+  deleteCard,
+  updateCard,
+  updateCategory,
+} from "@/app/(app)/settings/actions";
 import { CurrencyInput } from "@/components/forms/currency-input";
-import { MonthYearField } from "@/components/forms/month-year-field";
+import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SelectField } from "@/components/forms/select-field";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatCurrency, getStatementDueDate, getStatementWindow, toDateString, type CurrencyCode } from "@/lib/finance";
+import type { BinInfo } from "@/lib/bin-info";
+import {
+  formatCurrency,
+  formatCurrencyValue,
+  getStatementDueDate,
+  getStatementWindow,
+  parseAmount,
+  toDateString,
+  type CurrencyCode,
+} from "@/lib/finance";
 
 type Account = {
   id: string;
@@ -31,10 +65,12 @@ type CardItem = {
   id: string;
   name: string;
   account_id: string | null;
+  first6: string | null;
   last4: string | null;
   closing_day: number;
   due_day: number;
   limit_amount: number;
+  binInfo?: BinInfo | null;
 };
 
 type Tag = {
@@ -74,6 +110,67 @@ const currencyOptions = [
   { value: "EUR", label: "EUR" },
 ];
 
+const accountTypeValues = ["checking", "savings", "cash", "credit", "investment"] as const;
+const currencyValues = ["BRL", "USD", "EUR"] as const;
+
+const currencySchema = z
+  .string()
+  .optional()
+  .refine((value) => {
+    if (!value) return true;
+    return parseAmount(value) >= 0;
+  }, "Valor inválido");
+
+const accountSchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome"),
+  type: z.enum(accountTypeValues),
+  currency: z.enum(currencyValues),
+  initial_balance: currencySchema,
+});
+
+const categorySchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome"),
+});
+
+const cardSchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome"),
+  account_id: z.string().optional(),
+  card_number: z
+    .string()
+    .trim()
+    .refine((value) => value === "" || /^\d{10,19}$/.test(value), "Informe o número completo"),
+  closing_day: z.coerce.number().int().min(1, "Informe o dia").max(31, "Dia inválido"),
+  due_day: z.coerce.number().int().min(1, "Informe o dia").max(31, "Dia inválido"),
+  limit_amount: currencySchema,
+});
+
+const cardEditSchema = z.object({
+  closing_day: z.coerce.number().int().min(1, "Informe o dia").max(31, "Dia inválido"),
+  due_day: z.coerce.number().int().min(1, "Informe o dia").max(31, "Dia inválido"),
+  limit_amount: currencySchema,
+});
+
+const cardPaymentSchema = z.object({
+  card_id: z.string().min(1, "Selecione o cartão"),
+  account_id: z.string().min(1, "Selecione a conta"),
+  amount: z
+    .string()
+    .min(1, "Informe o valor")
+    .refine((value) => parseAmount(value) > 0, "Informe um valor maior que zero"),
+  occurred_on: z.string().min(1, "Informe a data"),
+});
+
+const tagSchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome"),
+});
+
+type AccountFormValues = z.infer<typeof accountSchema>;
+type CategoryFormValues = z.infer<typeof categorySchema>;
+type CardFormValues = z.infer<typeof cardSchema>;
+type CardEditFormValues = z.infer<typeof cardEditSchema>;
+type CardPaymentFormValues = z.infer<typeof cardPaymentSchema>;
+type TagFormValues = z.infer<typeof tagSchema>;
+
 export function SettingsClient({
   accounts,
   categories,
@@ -81,13 +178,166 @@ export function SettingsClient({
   tags,
   transactions,
 }: SettingsClientProps) {
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [isCategoryPending, startCategoryTransition] = useTransition();
+  const [isCardPending, startCardTransition] = useTransition();
+  const todayLabel = toDateString(new Date());
+  const accountForm = useForm<AccountFormValues>({
+    resolver: zodResolver(accountSchema),
+    defaultValues: {
+      name: "",
+      type: "checking",
+      currency: "BRL",
+      initial_balance: "",
+    },
+  });
+  const categoryForm = useForm<CategoryFormValues>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+  const categoryEditForm = useForm<CategoryFormValues>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+  const cardForm = useForm<CardFormValues>({
+    resolver: zodResolver(cardSchema),
+    defaultValues: {
+      name: "",
+      account_id: "",
+      card_number: "",
+      closing_day: "",
+      due_day: "",
+      limit_amount: "",
+    },
+  });
+  const cardEditForm = useForm<CardEditFormValues>({
+    resolver: zodResolver(cardEditSchema),
+    defaultValues: {
+      closing_day: "",
+      due_day: "",
+      limit_amount: "",
+    },
+  });
+  const cardPaymentForm = useForm<CardPaymentFormValues>({
+    resolver: zodResolver(cardPaymentSchema),
+    defaultValues: {
+      card_id: "",
+      account_id: "",
+      amount: "",
+      occurred_on: todayLabel,
+    },
+  });
+  const tagForm = useForm<TagFormValues>({
+    resolver: zodResolver(tagSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
   const accountMap = new Map(accounts.map((account) => [account.id, account.name]));
   const cardOptions = cards.map((card) => ({ value: card.id, label: card.name }));
   const cashAccountOptions = accounts
     .filter((account) => account.type !== "credit")
     .map((account) => ({ value: account.id, label: account.name }));
-  const todayLabel = toDateString(new Date());
+  const editingCategoryName = categoryEditForm.watch("name");
   const currentBalanceByAccount = new Map<string, number>();
+  const cardTransactionCount = new Map<string, number>();
+
+  const buildFormData = (values: Record<string, string | undefined>) => {
+    const formData = new FormData();
+    Object.entries(values).forEach(([key, value]) => {
+      formData.set(key, value ?? "");
+    });
+    return formData;
+  };
+
+  const handleAccountSubmit = accountForm.handleSubmit(async (values) => {
+    const formData = buildFormData({
+      name: values.name,
+      type: values.type,
+      currency: values.currency,
+      initial_balance: values.initial_balance,
+    });
+    await createAccount(formData);
+    accountForm.reset({
+      name: "",
+      type: "checking",
+      currency: "BRL",
+      initial_balance: "",
+    });
+  });
+
+  const handleCategorySubmit = categoryForm.handleSubmit(async (values) => {
+    const formData = buildFormData({
+      name: values.name,
+    });
+    await createCategory(formData);
+    categoryForm.reset({ name: "" });
+  });
+
+  const handleCardSubmit = cardForm.handleSubmit(async (values) => {
+    const formData = buildFormData({
+      name: values.name,
+      account_id: values.account_id,
+      card_number: values.card_number,
+      closing_day: values.closing_day,
+      due_day: values.due_day,
+      limit_amount: values.limit_amount,
+    });
+    await createCard(formData);
+    cardForm.reset({
+      name: "",
+      account_id: "",
+      card_number: "",
+      closing_day: "",
+      due_day: "",
+      limit_amount: "",
+    });
+  });
+
+  const handleCardEditSubmit = cardEditForm.handleSubmit(async (values) => {
+    if (!editingCardId) return;
+    await updateCard({
+      id: editingCardId,
+      closing_day: values.closing_day,
+      due_day: values.due_day,
+      limit_amount: parseAmount(values.limit_amount ?? ""),
+    });
+    setEditingCardId(null);
+    cardEditForm.reset({
+      closing_day: "",
+      due_day: "",
+      limit_amount: "",
+    });
+  });
+
+  const handleCardPaymentSubmit = cardPaymentForm.handleSubmit(async (values) => {
+    const formData = buildFormData({
+      card_id: values.card_id,
+      account_id: values.account_id,
+      amount: values.amount,
+      occurred_on: values.occurred_on,
+    });
+    await createCardPayment(formData);
+    cardPaymentForm.reset({
+      card_id: "",
+      account_id: "",
+      amount: "",
+      occurred_on: todayLabel,
+    });
+  });
+
+  const handleTagSubmit = tagForm.handleSubmit(async (values) => {
+    const formData = buildFormData({
+      name: values.name,
+    });
+    await createTag(formData);
+    tagForm.reset({ name: "" });
+  });
 
   accounts.forEach((account) => {
     currentBalanceByAccount.set(account.id, Number(account.initial_balance ?? 0));
@@ -120,6 +370,11 @@ export function SettingsClient({
     if (transaction.kind === "expense" || transaction.kind === "investment_contribution") {
       currentBalanceByAccount.set(transaction.account_id, current - amount);
     }
+  });
+  transactions.forEach((transaction) => {
+    if (!transaction.card_id) return;
+    const current = cardTransactionCount.get(transaction.card_id) ?? 0;
+    cardTransactionCount.set(transaction.card_id, current + 1);
   });
   const statementByCard = new Map(
     cards.map((card) => {
@@ -171,7 +426,120 @@ export function SettingsClient({
     {
       accessorKey: "name",
       header: "Nome",
-      cell: ({ row }) => row.original.name,
+      cell: ({ row }) => {
+        const isEditing = editingCategoryId === row.original.id;
+
+        if (!isEditing) {
+          return row.original.name;
+        }
+
+        return (
+          <div className="space-y-1">
+            <Input
+              {...categoryEditForm.register("name")}
+              className="max-w-[240px]"
+              autoFocus
+            />
+            {categoryEditForm.formState.errors.name && (
+              <p className="text-sm text-destructive">
+                {categoryEditForm.formState.errors.name.message}
+              </p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Ações",
+      cell: ({ row }) => {
+        const isEditing = editingCategoryId === row.original.id;
+        const trimmedName = (editingCategoryName ?? "").trim();
+        const hasChanges = trimmedName.length > 0 && trimmedName !== row.original.name;
+
+        if (isEditing) {
+          return (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={isCategoryPending || !hasChanges}
+                onClick={() => {
+                  startCategoryTransition(async () => {
+                    const result = await categoryEditForm.trigger();
+                    if (!result) return;
+                    await updateCategory({ id: row.original.id, name: trimmedName });
+                    setEditingCategoryId(null);
+                    categoryEditForm.reset({ name: "" });
+                  });
+                }}
+              >
+                Salvar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isCategoryPending}
+                onClick={() => {
+                  setEditingCategoryId(null);
+                  categoryEditForm.reset({ name: "" });
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingCategoryId(row.original.id);
+                categoryEditForm.reset({ name: row.original.name });
+              }}
+            >
+              Editar
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" size="sm" disabled={isCategoryPending}>
+                  Excluir
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir categoria?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {`Excluir a categoria "${row.original.name}"? Lançamentos e orçamentos ficarão sem categoria.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={isCategoryPending}
+                    onClick={() => {
+                      startCategoryTransition(async () => {
+                        await deleteCategory(row.original.id);
+                        if (editingCategoryId === row.original.id) {
+                          setEditingCategoryId(null);
+                          categoryEditForm.reset({ name: "" });
+                        }
+                      });
+                    }}
+                  >
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        );
+      },
     },
   ];
 
@@ -182,6 +550,25 @@ export function SettingsClient({
       cell: ({ row }) => row.original.name,
     },
     {
+      id: "digits",
+      header: "Dígitos",
+      cell: ({ row }) => {
+        const { first6, last4 } = row.original;
+        if (!first6 || !last4) return "-";
+        return `${first6} **** ${last4}`;
+      },
+    },
+    {
+      id: "brand",
+      header: "Bandeira/Banco",
+      cell: ({ row }) => {
+        const { binInfo, first6 } = row.original;
+        const label = [binInfo?.cardType, binInfo?.issuer].filter(Boolean).join(" • ");
+        if (label) return label;
+        return first6 ? `BIN ${first6}` : "-";
+      },
+    },
+    {
       id: "account",
       header: "Conta",
       cell: ({ row }) =>
@@ -190,17 +577,78 @@ export function SettingsClient({
     {
       accessorKey: "closing_day",
       header: "Fechamento",
-      cell: ({ row }) => row.original.closing_day,
+      cell: ({ row }) => {
+        const isEditing = editingCardId === row.original.id;
+        if (!isEditing) return row.original.closing_day;
+        return (
+          <div className="space-y-1">
+            <Input
+              type="number"
+              min={1}
+              max={31}
+              className="w-24"
+              {...cardEditForm.register("closing_day")}
+            />
+            {cardEditForm.formState.errors.closing_day && (
+              <p className="text-xs text-destructive">
+                {cardEditForm.formState.errors.closing_day.message}
+              </p>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "due_day",
       header: "Vencimento",
-      cell: ({ row }) => row.original.due_day,
+      cell: ({ row }) => {
+        const isEditing = editingCardId === row.original.id;
+        if (!isEditing) return row.original.due_day;
+        return (
+          <div className="space-y-1">
+            <Input
+              type="number"
+              min={1}
+              max={31}
+              className="w-24"
+              {...cardEditForm.register("due_day")}
+            />
+            {cardEditForm.formState.errors.due_day && (
+              <p className="text-xs text-destructive">
+                {cardEditForm.formState.errors.due_day.message}
+              </p>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "limit_amount",
       header: "Limite",
-      cell: ({ row }) => formatCurrency(row.original.limit_amount),
+      cell: ({ row }) => {
+        const isEditing = editingCardId === row.original.id;
+        if (!isEditing) return formatCurrency(row.original.limit_amount);
+        return (
+          <div className="space-y-1">
+            <Controller
+              control={cardEditForm.control}
+              name="limit_amount"
+              render={({ field }) => (
+                <CurrencyInput
+                  className="w-32"
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                />
+              )}
+            />
+            {cardEditForm.formState.errors.limit_amount && (
+              <p className="text-xs text-destructive">
+                {cardEditForm.formState.errors.limit_amount.message}
+              </p>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "statement",
@@ -234,6 +682,104 @@ export function SettingsClient({
         return `${usage.toFixed(1)}%`;
       },
     },
+    {
+      id: "actions",
+      header: "Ações",
+      cell: ({ row }) => {
+        const isEditing = editingCardId === row.original.id;
+        const hasTransactions = (cardTransactionCount.get(row.original.id) ?? 0) > 0;
+        const blockedMessage = `Não é possível excluir o cartão "${row.original.name}" porque há lançamentos vinculados.`;
+
+        if (isEditing) {
+          return (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={isCardPending}
+                onClick={() => {
+                  startCardTransition(async () => {
+                    await handleCardEditSubmit();
+                  });
+                }}
+              >
+                Salvar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isCardPending}
+                onClick={() => {
+                  setEditingCardId(null);
+                  cardEditForm.reset({
+                    closing_day: "",
+                    due_day: "",
+                    limit_amount: "",
+                  });
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingCardId(row.original.id);
+                cardEditForm.reset({
+                  closing_day: row.original.closing_day,
+                  due_day: row.original.due_day,
+                  limit_amount: formatCurrencyValue(row.original.limit_amount),
+                });
+              }}
+            >
+              Editar
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" size="sm">
+                  Excluir
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {hasTransactions ? "Exclusão bloqueada" : "Excluir cartão"}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {hasTransactions
+                      ? blockedMessage
+                      : `Tem certeza que deseja excluir o cartão "${row.original.name}"?`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{hasTransactions ? "Entendi" : "Cancelar"}</AlertDialogCancel>
+                  {!hasTransactions && (
+                    <AlertDialogAction
+                      disabled={isCardPending}
+                      onClick={() => {
+                        startCardTransition(async () => {
+                          await deleteCard(row.original.id);
+                        });
+                      }}
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  )}
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        );
+      },
+    },
   ];
 
   const tagColumns: ColumnDef<Tag>[] = [
@@ -263,19 +809,69 @@ export function SettingsClient({
               <CardTitle>Nova conta</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form
-                className="grid gap-4 md:grid-cols-2"
-                action={createAccount}
-              >
+              <form className="grid gap-4 md:grid-cols-2" onSubmit={handleAccountSubmit}>
                 <div className="space-y-2">
                   <Label htmlFor="account-name">Nome</Label>
-                  <Input id="account-name" name="name" required />
+                  <Input id="account-name" {...accountForm.register("name")} />
+                  {accountForm.formState.errors.name && (
+                    <p className="text-sm text-destructive">{accountForm.formState.errors.name.message}</p>
+                  )}
                 </div>
-                <SelectField name="type" label="Tipo" options={accountTypeOptions} defaultValue="checking" />
-                <SelectField name="currency" label="Moeda" options={currencyOptions} defaultValue="BRL" />
+                <div className="space-y-2">
+                  <Controller
+                    control={accountForm.control}
+                    name="type"
+                    render={({ field }) => (
+                      <SelectField
+                        name="type"
+                        label="Tipo"
+                        options={accountTypeOptions}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      />
+                    )}
+                  />
+                  {accountForm.formState.errors.type && (
+                    <p className="text-sm text-destructive">{accountForm.formState.errors.type.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Controller
+                    control={accountForm.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <SelectField
+                        name="currency"
+                        label="Moeda"
+                        options={currencyOptions}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      />
+                    )}
+                  />
+                  {accountForm.formState.errors.currency && (
+                    <p className="text-sm text-destructive">{accountForm.formState.errors.currency.message}</p>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="account-initial">Saldo inicial</Label>
-                  <CurrencyInput id="account-initial" name="initial_balance" />
+                  <Controller
+                    control={accountForm.control}
+                    name="initial_balance"
+                    render={({ field }) => (
+                      <CurrencyInput
+                        id="account-initial"
+                        name="initial_balance"
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                      />
+                    )}
+                  />
+                  {accountForm.formState.errors.initial_balance && (
+                    <p className="text-sm text-destructive">
+                      {accountForm.formState.errors.initial_balance.message}
+                    </p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Button type="submit">Salvar conta</Button>
@@ -291,10 +887,13 @@ export function SettingsClient({
               <CardTitle>Nova categoria</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form className="grid gap-4 md:grid-cols-2" action={createCategory}>
+              <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCategorySubmit}>
                 <div className="space-y-2">
                   <Label htmlFor="category-name">Nome</Label>
-                  <Input id="category-name" name="name" required />
+                  <Input id="category-name" {...categoryForm.register("name")} />
+                  {categoryForm.formState.errors.name && (
+                    <p className="text-sm text-destructive">{categoryForm.formState.errors.name.message}</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Button type="submit">Salvar categoria</Button>
@@ -310,32 +909,85 @@ export function SettingsClient({
               <CardTitle>Novo cartão</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form className="grid gap-4 md:grid-cols-2" action={createCard}>
+              <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCardSubmit}>
                 <div className="space-y-2">
                   <Label htmlFor="card-name">Nome</Label>
-                  <Input id="card-name" name="name" required />
+                  <Input id="card-name" {...cardForm.register("name")} />
+                  {cardForm.formState.errors.name && (
+                    <p className="text-sm text-destructive">{cardForm.formState.errors.name.message}</p>
+                  )}
                 </div>
-                <SelectField
-                  name="account_id"
-                  label="Conta vinculada"
-                  options={accounts.map((account) => ({ value: account.id, label: account.name }))}
-                  placeholder="Opcional"
-                />
                 <div className="space-y-2">
-                  <Label htmlFor="card-last4">Últimos 4 dígitos</Label>
-                  <Input id="card-last4" name="last4" maxLength={4} />
+                  <Controller
+                    control={cardForm.control}
+                    name="account_id"
+                    render={({ field }) => (
+                      <SelectField
+                        name="account_id"
+                        label="Conta vinculada"
+                        options={accounts.map((account) => ({ value: account.id, label: account.name }))}
+                        placeholder="Opcional"
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                      />
+                    )}
+                  />
+                  {cardForm.formState.errors.account_id && (
+                    <p className="text-sm text-destructive">{cardForm.formState.errors.account_id.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="card-number">Número do cartão</Label>
+                  <Input
+                    id="card-number"
+                    inputMode="numeric"
+                    maxLength={19}
+                    placeholder="Somente números"
+                    {...cardForm.register("card_number")}
+                  />
+                  {cardForm.formState.errors.card_number && (
+                    <p className="text-sm text-destructive">
+                      {cardForm.formState.errors.card_number.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="card-closing">Dia de fechamento</Label>
-                  <Input id="card-closing" name="closing_day" type="number" min={1} max={31} required />
+                  <Input
+                    id="card-closing"
+                    type="number"
+                    min={1}
+                    max={31}
+                    {...cardForm.register("closing_day")}
+                  />
+                  {cardForm.formState.errors.closing_day && (
+                    <p className="text-sm text-destructive">{cardForm.formState.errors.closing_day.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="card-due">Dia de vencimento</Label>
-                  <Input id="card-due" name="due_day" type="number" min={1} max={31} required />
+                  <Input id="card-due" type="number" min={1} max={31} {...cardForm.register("due_day")} />
+                  {cardForm.formState.errors.due_day && (
+                    <p className="text-sm text-destructive">{cardForm.formState.errors.due_day.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="card-limit">Limite</Label>
-                  <CurrencyInput id="card-limit" name="limit_amount" />
+                  <Controller
+                    control={cardForm.control}
+                    name="limit_amount"
+                    render={({ field }) => (
+                      <CurrencyInput
+                        id="card-limit"
+                        name="limit_amount"
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                      />
+                    )}
+                  />
+                  {cardForm.formState.errors.limit_amount && (
+                    <p className="text-sm text-destructive">{cardForm.formState.errors.limit_amount.message}</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Button type="submit">Salvar cartão</Button>
@@ -347,20 +999,87 @@ export function SettingsClient({
                 <p className="text-sm text-muted-foreground">
                   Registre o pagamento como transferência da conta corrente para a conta do cartão.
                 </p>
-                <form className="mt-4 grid gap-4 md:grid-cols-4" action={createCardPayment}>
-                  <SelectField name="card_id" label="Cartão" options={cardOptions} />
-                  <SelectField name="account_id" label="Conta de pagamento" options={cashAccountOptions} />
+                <form className="mt-4 grid gap-4 md:grid-cols-4" onSubmit={handleCardPaymentSubmit}>
+                  <div className="space-y-2">
+                    <Controller
+                      control={cardPaymentForm.control}
+                      name="card_id"
+                      render={({ field }) => (
+                        <SelectField
+                          name="card_id"
+                          label="Cartão"
+                          options={cardOptions}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        />
+                      )}
+                    />
+                    {cardPaymentForm.formState.errors.card_id && (
+                      <p className="text-sm text-destructive">
+                        {cardPaymentForm.formState.errors.card_id.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Controller
+                      control={cardPaymentForm.control}
+                      name="account_id"
+                      render={({ field }) => (
+                        <SelectField
+                          name="account_id"
+                          label="Conta de pagamento"
+                          options={cashAccountOptions}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        />
+                      )}
+                    />
+                    {cardPaymentForm.formState.errors.account_id && (
+                      <p className="text-sm text-destructive">
+                        {cardPaymentForm.formState.errors.account_id.message}
+                      </p>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="card-payment-amount">Valor</Label>
-                    <CurrencyInput id="card-payment-amount" name="amount" />
+                    <Controller
+                      control={cardPaymentForm.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <CurrencyInput
+                          id="card-payment-amount"
+                          name="amount"
+                          value={field.value ?? ""}
+                          onValueChange={field.onChange}
+                        />
+                      )}
+                    />
+                    {cardPaymentForm.formState.errors.amount && (
+                      <p className="text-sm text-destructive">
+                        {cardPaymentForm.formState.errors.amount.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="card-payment-date">Data</Label>
-                    <MonthYearField
-                      id="card-payment-date"
+                    <Controller
+                      control={cardPaymentForm.control}
                       name="occurred_on"
-                      defaultValue={todayLabel}
+                      render={({ field }) => (
+                        <DatePickerField
+                          id="card-payment-date"
+                          name="occurred_on"
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                        />
+                      )}
                     />
+                    {cardPaymentForm.formState.errors.occurred_on && (
+                      <p className="text-sm text-destructive">
+                        {cardPaymentForm.formState.errors.occurred_on.message}
+                      </p>
+                    )}
                   </div>
                   <div className="md:col-span-4">
                     <Button type="submit">Pagar fatura</Button>
@@ -376,10 +1095,13 @@ export function SettingsClient({
               <CardTitle>Nova tag</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form className="grid gap-4 md:grid-cols-2" action={createTag}>
+              <form className="grid gap-4 md:grid-cols-2" onSubmit={handleTagSubmit}>
                 <div className="space-y-2">
                   <Label htmlFor="tag-name">Nome</Label>
-                  <Input id="tag-name" name="name" required />
+                  <Input id="tag-name" {...tagForm.register("name")} />
+                  {tagForm.formState.errors.name && (
+                    <p className="text-sm text-destructive">{tagForm.formState.errors.name.message}</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Button type="submit">Salvar tag</Button>

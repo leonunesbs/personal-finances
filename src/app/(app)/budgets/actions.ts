@@ -49,8 +49,10 @@ export async function upsertMonthlyBudget(formData: FormData) {
   const month = normalizeMonth(getText(formData, "month"));
   const incomeTarget = parseAmount(formData.get("income_target"));
   const investmentPercent = parsePercent(getText(formData, "investment_percent"));
+  const reservePercent = parsePercent(getText(formData, "reserve_percent"));
   const investmentTarget = incomeTarget * (investmentPercent / 100);
-  const expenseLimit = Math.max(incomeTarget - investmentTarget, 0);
+  const reserveTarget = incomeTarget * (reservePercent / 100);
+  const expenseLimit = Math.max(incomeTarget - investmentTarget - reserveTarget, 0);
 
   if (!month) return;
 
@@ -61,6 +63,7 @@ export async function upsertMonthlyBudget(formData: FormData) {
       income_target: incomeTarget,
       expense_limit: expenseLimit,
       investment_target: investmentTarget,
+      reserve_target: reserveTarget,
     },
     { onConflict: "user_id,month" }
   );
@@ -106,6 +109,69 @@ export async function upsertBudgetItem(formData: FormData) {
       category_id: categoryId,
       amount_limit: amountLimit,
     },
+    { onConflict: "monthly_budget_id,category_id" }
+  );
+
+  revalidatePath("/budgets");
+  revalidatePath("/dashboard");
+}
+
+export async function upsertBudgetItems(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const month = normalizeMonth(getText(formData, "month"));
+  const itemsValue = formData.get("items");
+
+  if (!month || typeof itemsValue !== "string") return;
+
+  let parsedItems: Array<{ category_id?: string; amount_limit?: string }> = [];
+
+  try {
+    const decoded = JSON.parse(itemsValue);
+    if (Array.isArray(decoded)) {
+      parsedItems = decoded;
+    }
+  } catch {
+    return;
+  }
+
+  const itemsToUpsert = parsedItems
+    .filter((item) => typeof item?.category_id === "string" && item.category_id.trim() !== "")
+    .map((item) => ({
+      category_id: item.category_id!.trim(),
+      amount_limit: parseAmount(typeof item.amount_limit === "string" ? item.amount_limit : ""),
+    }));
+
+  if (itemsToUpsert.length === 0) return;
+
+  const { data: budget } = await supabase
+    .from("monthly_budgets")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("month", month)
+    .maybeSingle();
+
+  let resolvedBudgetId = budget?.id;
+
+  if (!resolvedBudgetId) {
+    const { data: insertedBudget } = await supabase
+      .from("monthly_budgets")
+      .insert({
+        user_id: user.id,
+        month,
+      })
+      .select("id")
+      .single();
+    resolvedBudgetId = insertedBudget?.id;
+  }
+
+  if (!resolvedBudgetId) return;
+
+  await supabase.from("budget_items").upsert(
+    itemsToUpsert.map((item) => ({
+      monthly_budget_id: resolvedBudgetId,
+      category_id: item.category_id,
+      amount_limit: item.amount_limit,
+    })),
     { onConflict: "monthly_budget_id,category_id" }
   );
 

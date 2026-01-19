@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getBinInfo } from "@/lib/bin-info";
 import { parseAmount, parseDate, parseIntValue, toDateString } from "@/lib/finance";
 import { requireUser } from "@/lib/supabase/auth";
 
@@ -62,26 +63,112 @@ export async function createCategory(formData: FormData) {
   revalidatePath("/settings");
 }
 
+export async function updateCategory({
+  id,
+  name,
+}: {
+  id: string;
+  name: string;
+}) {
+  const { supabase, user } = await requireUser();
+  const trimmedName = name.trim();
+
+  if (!id || !trimmedName) return;
+
+  await supabase
+    .from("categories")
+    .update({ name: trimmedName })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  revalidatePath("/settings");
+}
+
+export async function deleteCategory(id: string) {
+  const { supabase, user } = await requireUser();
+
+  if (!id) return;
+
+  await supabase.from("categories").delete().eq("id", id).eq("user_id", user.id);
+
+  revalidatePath("/settings");
+}
+
 export async function createCard(formData: FormData) {
   const { supabase, user } = await requireUser();
   const name = getText(formData, "name");
   const accountId = getText(formData, "account_id") || null;
-  const last4 = getText(formData, "last4") || null;
+  const cardNumber = getText(formData, "card_number");
   const closingDay = parseIntValue(formData.get("closing_day"));
   const dueDay = parseIntValue(formData.get("due_day"));
   const limitAmount = parseAmount(formData.get("limit_amount"));
 
   if (!name || closingDay <= 0 || dueDay <= 0) return;
 
+  const digitsOnly = cardNumber.replace(/\D/g, "");
+  const first6 = digitsOnly.length >= 10 ? digitsOnly.slice(0, 6) : null;
+  const last4 = digitsOnly.length >= 10 ? digitsOnly.slice(-4) : null;
+  const binInfo = first6 ? await getBinInfo(first6) : null;
+
   await supabase.from("cards").insert({
     user_id: user.id,
     account_id: accountId,
     name,
+    first6,
     last4,
+    bin_card_type: binInfo?.cardType ?? null,
+    bin_issuer: binInfo?.issuer ?? null,
+    bin_country: binInfo?.country ?? null,
     closing_day: closingDay,
     due_day: dueDay,
     limit_amount: limitAmount,
   });
+
+  revalidatePath("/settings");
+}
+
+export async function deleteCard(id: string) {
+  const { supabase, user } = await requireUser();
+
+  if (!id) return;
+
+  const { count } = await supabase
+    .from("transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("card_id", id)
+    .eq("user_id", user.id);
+
+  if (count && count > 0) return;
+
+  await supabase.from("cards").delete().eq("id", id).eq("user_id", user.id);
+
+  revalidatePath("/settings");
+}
+
+export async function updateCard({
+  id,
+  closing_day,
+  due_day,
+  limit_amount,
+}: {
+  id: string;
+  closing_day: number;
+  due_day: number;
+  limit_amount: number;
+}) {
+  const { supabase, user } = await requireUser();
+
+  if (!id || closing_day <= 0 || due_day <= 0) return;
+
+  await supabase
+    .from("cards")
+    .update({
+      closing_day,
+      due_day,
+      limit_amount,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   revalidatePath("/settings");
 }
@@ -108,6 +195,7 @@ export async function createCardPayment(formData: FormData) {
     account_id: accountId,
     to_account_id: card.account_id,
     card_id: cardId,
+    is_bill_payment: true,
   });
 
   revalidatePath("/settings");
