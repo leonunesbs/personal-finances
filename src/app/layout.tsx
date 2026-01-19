@@ -1,17 +1,18 @@
-import { Geist } from 'next/font/google';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 
-import type { Metadata } from 'next';
+import { cn } from "@/lib/utils";
 
-import './globals.css';
+import "./globals.css";
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: `TypeScript starter for Next.js by João Pedro Schmitz`,
-  description: `TypeScript starter for Next.js that includes all you need to build amazing apps`,
+  title: "Personal Finances",
+  description: "Planeje receitas, despesas e investimentos com orcamentos mensais.",
 };
 export default function RootLayout({
   children,
@@ -20,7 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable}`}>{children}</body>
+      <body className={cn("min-h-screen font-sans antialiased", inter.variable)}>
+        {children}
+      </body>
     </html>
   );
 }
