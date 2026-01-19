@@ -274,22 +274,44 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const currentDayInRealMonth = today.getDate();
   const remainingDays = isCurrentMonth ? Math.max(daysInMonth - currentDayInRealMonth + 1, 1) : daysInMonth;
   
+  // Calculate expense by category for budget calculation
+  const expenseByCategoryForBudget = new Map<string, number>();
+  monthTransactions?.forEach((item) => {
+    if (item.kind !== 'expense' || !item.category_id) return;
+    const current = expenseByCategoryForBudget.get(item.category_id) ?? 0;
+    expenseByCategoryForBudget.set(item.category_id, current + Number(item.amount ?? 0));
+  });
+  
+  // Calculate total budget from categories and remaining budget
+  const totalCategoryBudget = (budgetItems ?? []).reduce((sum, item) => sum + Number(item.amount_limit ?? 0), 0);
+  const totalCategorySpent = (budgetItems ?? []).reduce((sum, item) => {
+    const categoryId = item.category_id;
+    if (!categoryId) return sum;
+    return sum + (expenseByCategoryForBudget.get(categoryId) ?? 0);
+  }, 0);
+  const totalCategoryRemaining = Math.max(totalCategoryBudget - totalCategorySpent, 0);
+  
+  // Use category budgets if available, otherwise fall back to general expense limit
+  const hasCategoryBudgets = totalCategoryBudget > 0;
+  const effectiveBudget = hasCategoryBudgets ? totalCategoryBudget : expenseLimit;
+  const effectiveSpent = hasCategoryBudgets ? totalCategorySpent : totals.expense;
+  const effectiveRemaining = hasCategoryBudgets ? totalCategoryRemaining : Math.max(expenseLimit - totals.expense, 0);
+  
   // Calculate daily allowance based on month type
   let dailyAllowance = 0;
   let dailyAllowanceLabel = 'Limite diário disponível';
   
   if (isPastMonth) {
     // Past month: show average daily spending
-    dailyAllowance = daysInMonth > 0 ? totals.expense / daysInMonth : 0;
+    dailyAllowance = daysInMonth > 0 ? effectiveSpent / daysInMonth : 0;
     dailyAllowanceLabel = 'Média diária de gastos';
   } else if (isCurrentMonth) {
-    // Current month: (expense limit - expenses already made) / remaining days
-    const remaining = Math.max(expenseLimit - totals.expense, 0);
-    dailyAllowance = remainingDays > 0 ? remaining / remainingDays : 0;
+    // Current month: remaining budget / remaining days
+    dailyAllowance = remainingDays > 0 ? effectiveRemaining / remainingDays : 0;
     dailyAllowanceLabel = 'Limite diário disponível';
   } else if (isFutureMonth) {
-    // Future month: expense limit / total days in month
-    dailyAllowance = daysInMonth > 0 ? expenseLimit / daysInMonth : 0;
+    // Future month: total budget / total days in month
+    dailyAllowance = daysInMonth > 0 ? effectiveBudget / daysInMonth : 0;
     dailyAllowanceLabel = 'Limite diário planejado';
   }
   
