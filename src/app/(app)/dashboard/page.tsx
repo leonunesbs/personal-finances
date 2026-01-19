@@ -273,7 +273,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const expenseProgress = expenseLimit > 0 ? Math.min((totals.expense / expenseLimit) * 100, 100) : 0;
   const investmentProgress =
     investmentTarget > 0 ? Math.min((totals.investmentContribution / investmentTarget) * 100, 100) : 0;
-  const reserveProgress = reserveTarget > 0 ? Math.min((saved / reserveTarget) * 100, 100) : 0;
+  const reserveProgress = reserveTarget > 0 ? Math.max(Math.min((saved / reserveTarget) * 100, 100), 0) : 0;
 
   const incomeRemaining = Math.max(incomeTarget - totals.income, 0);
   const expenseRemaining = Math.max(expenseLimit - totals.expense, 0);
@@ -582,27 +582,29 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Meta de Reserva</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatCurrency(saved, 'BRL')} de {formatCurrency(reserveTarget, 'BRL')}
+                      {saved >= 0
+                        ? `${formatCurrency(saved, 'BRL')} de ${formatCurrency(reserveTarget, 'BRL')}`
+                        : `Meta: ${formatCurrency(reserveTarget, 'BRL')}`}
                     </p>
                   </div>
                   <div className="text-right">
                     <p
                       className={`text-lg font-semibold ${reserveProgress >= 100 ? 'text-emerald-600' : saved >= 0 ? 'text-amber-600' : 'text-rose-600'}`}
                     >
-                      {reserveProgress.toFixed(0)}%
+                      {saved >= 0 ? `${reserveProgress.toFixed(0)}%` : 'Déficit'}
                     </p>
                     {saved >= 0 && reserveRemaining > 0 && (
                       <p className="text-xs text-muted-foreground">Faltam {formatCurrency(reserveRemaining, 'BRL')}</p>
                     )}
                     {saved < 0 && (
-                      <p className="text-xs text-rose-600">Déficit de {formatCurrency(Math.abs(saved), 'BRL')}</p>
+                      <p className="text-xs text-rose-600">{formatCurrency(Math.abs(saved), 'BRL')}</p>
                     )}
                   </div>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted">
                   <div
                     className={`h-2 rounded-full transition-all ${reserveProgress >= 100 ? 'bg-emerald-500' : saved >= 0 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                    style={{ width: `${Math.min(Math.max(reserveProgress, 0), 100)}%` }}
+                    style={{ width: `${reserveProgress}%` }}
                   />
                 </div>
               </div>
@@ -917,7 +919,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <CardDescription>
               {saved >= reserveTarget
                 ? 'Meta de reserva atingida!'
-                : `Faltam ${formatCurrency(reserveRemaining, 'BRL')} para a meta`}
+                : saved >= 0
+                  ? `Faltam ${formatCurrency(reserveRemaining, 'BRL')} para a meta`
+                  : 'Você está com déficit este mês'}
             </CardDescription>
           )}
         </CardHeader>
@@ -927,18 +931,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           >
             {formatCurrency(saved, 'BRL')}
           </p>
-          {reserveTarget > 0 && (
+          {reserveTarget > 0 && saved >= 0 && (
             <>
               <div className="h-2 w-full rounded-full bg-muted">
                 <div
-                  className={`h-2 rounded-full transition-all ${saved >= reserveTarget ? 'bg-emerald-500' : saved >= 0 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                  style={{ width: `${Math.min(Math.max(reserveProgress, 0), 100)}%` }}
+                  className={`h-2 rounded-full transition-all ${saved >= reserveTarget ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  style={{ width: `${reserveProgress}%` }}
                 />
               </div>
               <p className="text-sm text-muted-foreground">
                 {reserveProgress.toFixed(0)}% da meta de {formatCurrency(reserveTarget, 'BRL')}
               </p>
             </>
+          )}
+          {reserveTarget > 0 && saved < 0 && (
+            <p className="text-sm text-rose-600">
+              Déficit de {formatCurrency(Math.abs(saved), 'BRL')} em relação à meta de{' '}
+              {formatCurrency(reserveTarget, 'BRL')}
+            </p>
           )}
         </CardContent>
       </Card>
