@@ -51,8 +51,10 @@ import {
   TrendingUpIcon,
 } from "lucide-react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
@@ -115,6 +117,23 @@ export const schema = z.object({
   target: z.string(),
   limit: z.string(),
   reviewer: z.string(),
+})
+
+const inlineTargetSchema = z.object({
+  target: z.string().min(1, "Target is required."),
+})
+
+const inlineLimitSchema = z.object({
+  limit: z.string().min(1, "Limit is required."),
+})
+
+const sheetFormSchema = z.object({
+  header: z.string().min(1, "Header is required."),
+  type: z.string().min(1, "Type is required."),
+  status: z.string().min(1, "Status is required."),
+  target: z.string().min(1, "Target is required."),
+  limit: z.string().min(1, "Limit is required."),
+  reviewer: z.string().min(1, "Reviewer is required."),
 })
 
 // Create a separate component for the drag handle
@@ -208,52 +227,12 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     accessorKey: "target",
     header: () => <div className="w-full text-right">Target</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-          Target
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
-          defaultValue={row.original.target}
-          id={`${row.original.id}-target`}
-        />
-      </form>
-    ),
+    cell: ({ row }) => <InlineTargetForm item={row.original} />,
   },
   {
     accessorKey: "limit",
     header: () => <div className="w-full text-right">Limit</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-          Limit
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
-          defaultValue={row.original.limit}
-          id={`${row.original.id}-limit`}
-        />
-      </form>
-    ),
+    cell: ({ row }) => <InlineLimitForm item={row.original} />,
   },
   {
     accessorKey: "reviewer",
@@ -661,8 +640,103 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
+function InlineTargetForm({ item }: { item: z.infer<typeof schema> }) {
+  const form = useForm<z.infer<typeof inlineTargetSchema>>({
+    resolver: zodResolver(inlineTargetSchema),
+    defaultValues: {
+      target: item.target,
+    },
+  })
+
+  function handleSubmit(values: z.infer<typeof inlineTargetSchema>) {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+      loading: `Saving ${item.header}`,
+      success: "Done",
+      error: "Error",
+    })
+    return values
+  }
+
+  return (
+    <form onSubmit={form.handleSubmit(handleSubmit)}>
+      <Label htmlFor={`${item.id}-target`} className="sr-only">
+        Target
+      </Label>
+      <Input
+        className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
+        id={`${item.id}-target`}
+        aria-invalid={!!form.formState.errors.target}
+        {...form.register("target")}
+      />
+      {form.formState.errors.target ? (
+        <p className="mt-1 text-xs text-destructive">
+          {form.formState.errors.target.message}
+        </p>
+      ) : null}
+    </form>
+  )
+}
+
+function InlineLimitForm({ item }: { item: z.infer<typeof schema> }) {
+  const form = useForm<z.infer<typeof inlineLimitSchema>>({
+    resolver: zodResolver(inlineLimitSchema),
+    defaultValues: {
+      limit: item.limit,
+    },
+  })
+
+  function handleSubmit(values: z.infer<typeof inlineLimitSchema>) {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+      loading: `Saving ${item.header}`,
+      success: "Done",
+      error: "Error",
+    })
+    return values
+  }
+
+  return (
+    <form onSubmit={form.handleSubmit(handleSubmit)}>
+      <Label htmlFor={`${item.id}-limit`} className="sr-only">
+        Limit
+      </Label>
+      <Input
+        className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
+        id={`${item.id}-limit`}
+        aria-invalid={!!form.formState.errors.limit}
+        {...form.register("limit")}
+      />
+      {form.formState.errors.limit ? (
+        <p className="mt-1 text-xs text-destructive">
+          {form.formState.errors.limit.message}
+        </p>
+      ) : null}
+    </form>
+  )
+}
+
 function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
   const isMobile = useIsMobile()
+  const formId = React.useId()
+  const form = useForm<z.infer<typeof sheetFormSchema>>({
+    resolver: zodResolver(sheetFormSchema),
+    defaultValues: {
+      header: item.header,
+      type: item.type,
+      status: item.status,
+      target: item.target,
+      limit: item.limit,
+      reviewer: item.reviewer === "Assign reviewer" ? "" : item.reviewer,
+    },
+  })
+
+  function handleSubmit(values: z.infer<typeof sheetFormSchema>) {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+      loading: `Saving ${item.header}`,
+      success: "Done",
+      error: "Error",
+    })
+    return values
+  }
 
   return (
     <Sheet>
@@ -736,81 +810,147 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
               <Separator />
             </>
           )}
-          <form className="flex flex-col gap-4">
+          <form
+            id={formId}
+            className="flex flex-col gap-4"
+            onSubmit={form.handleSubmit(handleSubmit)}
+          >
             <div className="flex flex-col gap-3">
               <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.header} />
+              <Input
+                id="header"
+                aria-invalid={!!form.formState.errors.header}
+                {...form.register("header")}
+              />
+              {form.formState.errors.header ? (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.header.message}
+                </p>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <Label htmlFor="type">Type</Label>
-                <Select defaultValue={item.type}>
-                  <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder="Select a type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Table of Contents">
-                      Table of Contents
-                    </SelectItem>
-                    <SelectItem value="Executive Summary">
-                      Executive Summary
-                    </SelectItem>
-                    <SelectItem value="Technical Approach">
-                      Technical Approach
-                    </SelectItem>
-                    <SelectItem value="Design">Design</SelectItem>
-                    <SelectItem value="Capabilities">Capabilities</SelectItem>
-                    <SelectItem value="Focus Documents">
-                      Focus Documents
-                    </SelectItem>
-                    <SelectItem value="Narrative">Narrative</SelectItem>
-                    <SelectItem value="Cover Page">Cover Page</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="type" className="w-full">
+                        <SelectValue placeholder="Select a type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Table of Contents">
+                          Table of Contents
+                        </SelectItem>
+                        <SelectItem value="Executive Summary">
+                          Executive Summary
+                        </SelectItem>
+                        <SelectItem value="Technical Approach">
+                          Technical Approach
+                        </SelectItem>
+                        <SelectItem value="Design">Design</SelectItem>
+                        <SelectItem value="Capabilities">Capabilities</SelectItem>
+                        <SelectItem value="Focus Documents">
+                          Focus Documents
+                        </SelectItem>
+                        <SelectItem value="Narrative">Narrative</SelectItem>
+                        <SelectItem value="Cover Page">Cover Page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.type ? (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.type.message}
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-col gap-3">
                 <Label htmlFor="status">Status</Label>
-                <Select defaultValue={item.status}>
-                  <SelectTrigger id="status" className="w-full">
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Done">Done</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Not Started">Not Started</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="status" className="w-full">
+                        <SelectValue placeholder="Select a status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Done">Done</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Not Started">Not Started</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.status ? (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.status.message}
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <Label htmlFor="target">Target</Label>
-                <Input id="target" defaultValue={item.target} />
+                <Input
+                  id="target"
+                  aria-invalid={!!form.formState.errors.target}
+                  {...form.register("target")}
+                />
+                {form.formState.errors.target ? (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.target.message}
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-col gap-3">
                 <Label htmlFor="limit">Limit</Label>
-                <Input id="limit" defaultValue={item.limit} />
+                <Input
+                  id="limit"
+                  aria-invalid={!!form.formState.errors.limit}
+                  {...form.register("limit")}
+                />
+                {form.formState.errors.limit ? (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.limit.message}
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="reviewer">Reviewer</Label>
-              <Select defaultValue={item.reviewer}>
-                <SelectTrigger id="reviewer" className="w-full">
-                  <SelectValue placeholder="Select a reviewer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-                  <SelectItem value="Jamik Tashpulatov">
-                    Jamik Tashpulatov
-                  </SelectItem>
-                  <SelectItem value="Emily Whalen">Emily Whalen</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={form.control}
+                name="reviewer"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="reviewer" className="w-full">
+                      <SelectValue placeholder="Select a reviewer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
+                      <SelectItem value="Jamik Tashpulatov">
+                        Jamik Tashpulatov
+                      </SelectItem>
+                      <SelectItem value="Emily Whalen">Emily Whalen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {form.formState.errors.reviewer ? (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.reviewer.message}
+                </p>
+              ) : null}
             </div>
           </form>
         </div>
         <SheetFooter className="mt-auto flex gap-2 sm:flex-col sm:space-x-0">
-          <Button className="w-full">Submit</Button>
+          <Button className="w-full" type="submit" form={formId}>
+            Submit
+          </Button>
           <SheetClose asChild>
             <Button variant="outline" className="w-full">
               Done

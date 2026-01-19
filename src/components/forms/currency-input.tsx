@@ -9,11 +9,16 @@ import { formatCurrencyInput, formatCurrencyValue } from "@/lib/finance";
 type CurrencyInputProps = Omit<ComponentProps<typeof Input>, "type" | "inputMode" | "onChange" | "value" | "defaultValue"> & {
   defaultValue?: number | string;
   value?: string;
+  currencyPrefix?: string;
+  onChange?: (value: string) => void;
   onValueChange?: (value: string) => void;
 };
 
-export function CurrencyInput({ defaultValue, value, onValueChange, ...props }: CurrencyInputProps) {
-  const initialValue = useMemo(() => formatCurrencyValue(defaultValue), [defaultValue]);
+export function CurrencyInput({ defaultValue, value, currencyPrefix = "R$", onChange, onValueChange, ...props }: CurrencyInputProps) {
+  const initialValue = useMemo(
+    () => formatCurrencyValue(defaultValue, currencyPrefix),
+    [defaultValue, currencyPrefix],
+  );
   const [internalValue, setInternalValue] = useState(initialValue);
   const displayValue = value ?? internalValue;
 
@@ -24,10 +29,11 @@ export function CurrencyInput({ defaultValue, value, onValueChange, ...props }: 
   }, [initialValue, value]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextValue = formatCurrencyInput(event.target.value);
+    const nextValue = formatCurrencyInput(event.target.value, currencyPrefix);
     if (value === undefined) {
       setInternalValue(nextValue);
     }
+    onChange?.(nextValue);
     onValueChange?.(nextValue);
   };
 

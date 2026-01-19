@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { FocusEventHandler } from "react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -9,9 +10,13 @@ type MonthYearFieldProps = {
   id: string;
   name: string;
   defaultValue?: string;
+  value?: string;
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  onBlur?: FocusEventHandler<HTMLInputElement>;
+  onChange?: (value: string) => void;
+  onValueChange?: (value: string) => void;
 };
 
 function parseMonthYear(value?: string) {
@@ -38,15 +43,32 @@ export function MonthYearField({
   id,
   name,
   defaultValue,
+  value,
   required,
   disabled,
   className,
+  onBlur,
+  onChange,
+  onValueChange,
 }: MonthYearFieldProps) {
-  const parsed = parseMonthYear(defaultValue);
+  const parsed = parseMonthYear(value ?? defaultValue);
   const [month, setMonth] = useState(parsed.month);
   const [year, setYear] = useState(parsed.year);
 
+  useEffect(() => {
+    if (value === undefined) return;
+    const next = parseMonthYear(value);
+    setMonth(next.month);
+    setYear(next.year);
+  }, [value]);
+
   const hiddenValue = useMemo(() => buildMonthYearValue(month, year), [month, year]);
+  const inputValue = value ?? hiddenValue;
+
+  useEffect(() => {
+    onChange?.(hiddenValue);
+    onValueChange?.(hiddenValue);
+  }, [hiddenValue, onChange, onValueChange]);
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -61,6 +83,7 @@ export function MonthYearField({
           placeholder="Mês"
           value={month}
           onChange={(event) => setMonth(event.target.value)}
+          onBlur={onBlur}
           required={required}
           disabled={disabled}
         />
@@ -74,6 +97,7 @@ export function MonthYearField({
           placeholder="Ano"
           value={year}
           onChange={(event) => setYear(event.target.value)}
+          onBlur={onBlur}
           required={required}
           disabled={disabled}
         />
@@ -82,7 +106,7 @@ export function MonthYearField({
         id={id}
         name={name}
         type="hidden"
-        value={hiddenValue}
+        value={inputValue}
         readOnly
         required={required}
       />

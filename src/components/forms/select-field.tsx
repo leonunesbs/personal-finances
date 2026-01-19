@@ -18,6 +18,8 @@ type SelectFieldProps = {
   defaultValue?: string;
   value?: string;
   disabled?: boolean;
+  onBlur?: () => void;
+  onChange?: (value: string) => void;
   onValueChange?: (value: string) => void;
 };
 
@@ -29,6 +31,8 @@ export function SelectField({
   defaultValue,
   value,
   disabled,
+  onBlur,
+  onChange,
   onValueChange,
 }: SelectFieldProps) {
   const id = useId();
@@ -39,6 +43,7 @@ export function SelectField({
     if (value === undefined) {
       setInternalValue(nextValue);
     }
+    onChange?.(nextValue);
     onValueChange?.(nextValue);
   };
 
@@ -47,7 +52,7 @@ export function SelectField({
       <Label htmlFor={id}>{label}</Label>
       <input type="hidden" name={name} value={currentValue} />
       <Select value={currentValue} onValueChange={handleValueChange} disabled={disabled}>
-        <SelectTrigger id={id} disabled={disabled}>
+        <SelectTrigger id={id} disabled={disabled} onBlur={onBlur}>
           <SelectValue placeholder={placeholder ?? "Selecione"} />
         </SelectTrigger>
         <SelectContent>

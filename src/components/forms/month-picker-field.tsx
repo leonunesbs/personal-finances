@@ -13,6 +13,8 @@ type MonthPickerFieldProps = {
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onChange?: (value: string) => void;
   onValueChange?: (value: string) => void;
 };
 
@@ -40,6 +42,8 @@ export function MonthPickerField({
   required,
   disabled,
   className,
+  onBlur,
+  onChange,
   onValueChange,
 }: MonthPickerFieldProps) {
   const parsed = parseMonthValue(value ?? defaultValue);
@@ -56,8 +60,9 @@ export function MonthPickerField({
   const fieldValue = React.useMemo(() => buildMonthValue(month, year), [month, year]);
 
   React.useEffect(() => {
+    onChange?.(fieldValue);
     onValueChange?.(fieldValue);
-  }, [fieldValue, onValueChange]);
+  }, [fieldValue, onChange, onValueChange]);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -72,6 +77,7 @@ export function MonthPickerField({
           placeholder="Mês"
           value={month}
           onChange={(event) => setMonth(event.target.value)}
+          onBlur={onBlur}
           required={required}
           disabled={disabled}
         />
@@ -85,6 +91,7 @@ export function MonthPickerField({
           placeholder="Ano"
           value={year}
           onChange={(event) => setYear(event.target.value)}
+          onBlur={onBlur}
           required={required}
           disabled={disabled}
         />

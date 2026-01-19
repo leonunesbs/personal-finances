@@ -8,23 +8,39 @@ import { Label } from "@/components/ui/label";
 type CheckboxFieldProps = {
   name: string;
   label: string;
+  checked?: boolean;
   defaultChecked?: boolean;
+  disabled?: boolean;
+  onChange?: (checked: boolean) => void;
   onCheckedChange?: (checked: boolean) => void;
 };
 
-export function CheckboxField({ name, label, defaultChecked, onCheckedChange }: CheckboxFieldProps) {
+export function CheckboxField({
+  name,
+  label,
+  checked,
+  defaultChecked,
+  disabled,
+  onChange,
+  onCheckedChange,
+}: CheckboxFieldProps) {
   const id = useId();
-  const [checked, setChecked] = useState(defaultChecked ?? false);
+  const [internalChecked, setInternalChecked] = useState(defaultChecked ?? false);
+  const currentChecked = checked ?? internalChecked;
 
   return (
     <div className="flex items-center gap-2">
-      <input type="hidden" name={name} value={checked ? "true" : "false"} />
+      <input type="hidden" name={name} value={currentChecked ? "true" : "false"} />
       <Checkbox
         id={id}
-        checked={checked}
+        checked={currentChecked}
+        disabled={disabled}
         onCheckedChange={(value) => {
           const nextChecked = Boolean(value);
-          setChecked(nextChecked);
+          if (checked === undefined) {
+            setInternalChecked(nextChecked);
+          }
+          onChange?.(nextChecked);
           onCheckedChange?.(nextChecked);
         }}
       />

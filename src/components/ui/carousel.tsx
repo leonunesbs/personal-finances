@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import useEmblaCarousel, {
-  type UseEmblaCarouselType,
+    type UseEmblaCarouselType,
 } from "embla-carousel-react";
 import * as React from "react";
 import { Button } from "./button";
@@ -185,7 +185,7 @@ function CarouselPrevious({
       variant={variant}
       size={size}
       className={cn(
-        "rounded-full absolute touch-manipulation",
+        "rounded-full absolute touch-manipulation opacity-70 hover:opacity-100 disabled:opacity-40",
         orientation === "horizontal"
           ? "top-1/2 left-2 -translate-y-1/2 sm:-left-6"
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -215,7 +215,7 @@ function CarouselNext({
       variant={variant}
       size={size}
       className={cn(
-        "rounded-full absolute touch-manipulation",
+        "rounded-full absolute touch-manipulation opacity-70 hover:opacity-100 disabled:opacity-40",
         orientation === "horizontal"
           ? "top-1/2 right-2 -translate-y-1/2 sm:-right-6"
           : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -232,8 +232,8 @@ function CarouselNext({
 }
 
 export {
-  Carousel,
-  CarouselContent,
-  CarouselItem, CarouselNext, CarouselPrevious, useCarousel, type CarouselApi
+    Carousel,
+    CarouselContent,
+    CarouselItem, CarouselNext, CarouselPrevious, useCarousel, type CarouselApi
 };
 
