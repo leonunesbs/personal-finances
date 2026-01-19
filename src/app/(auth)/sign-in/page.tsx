@@ -1,10 +1,8 @@
 import Link from "next/link";
 
-import { sendMagicLink } from "@/app/(auth)/actions";
+import { MagicLinkForm } from "@/app/(auth)/magic-link-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 type SignInPageProps = {
   searchParams?: {
@@ -15,6 +13,8 @@ type SignInPageProps = {
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const resolvedParams = (await searchParams) ?? {};
+  const sentMessage = resolvedParams.sent ? "Confira seu e-mail para o link de acesso." : undefined;
+  const errorMessage = resolvedParams.error ? resolvedParams.error : undefined;
   return (
     <Card>
       <CardHeader>
@@ -22,17 +22,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <CardDescription>Envie um magic link para acessar sem senha.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="space-y-4" action={sendMagicLink}>
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input id="email" name="email" type="email" required />
-          </div>
-          {resolvedParams.sent ? <p className="text-sm">Confira seu e-mail para o link de acesso.</p> : null}
-          {resolvedParams.error ? <p className="text-sm">{resolvedParams.error}</p> : null}
-          <Button type="submit" className="w-full">
-            Enviar link
-          </Button>
-        </form>
+        <MagicLinkForm
+          submitLabel="Enviar link"
+          successMessage={sentMessage}
+          errorMessage={errorMessage}
+        />
       </CardContent>
       <CardFooter className="justify-between">
         <p className="text-sm">Novo por aqui?</p>
