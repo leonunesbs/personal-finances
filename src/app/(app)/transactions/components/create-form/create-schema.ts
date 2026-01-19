@@ -55,6 +55,13 @@ export const createTransactionSchema = (
           path: ['account_id'],
         });
       }
+      if (!values.category_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Selecione a categoria.',
+          path: ['category_id'],
+        });
+      }
 
       if (values.kind === 'transfer' && !values.to_account_id) {
         ctx.addIssue({

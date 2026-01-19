@@ -15,7 +15,7 @@ export const editTransactionSchema = (
       kind: z.string().min(1, 'Selecione o tipo.'),
       account_id: z.string().min(1, 'Selecione a conta.'),
       to_account_id: z.string().optional(),
-      category_id: z.string().optional(),
+      category_id: z.string().min(1, 'Selecione a categoria.'),
       card_id: z.string().optional(),
       amount: z.string().min(1, 'Informe o valor.'),
       is_bill_payment: z.boolean().optional(),

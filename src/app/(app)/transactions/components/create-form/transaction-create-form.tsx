@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CurrencyInput } from '@/components/forms/currency-input';
 import { DatePickerField } from '@/components/forms/date-picker-field';
 import { SelectField } from '@/components/forms/select-field';
+import { ComboboxField } from '@/components/forms/combobox-field';
 import { cn } from '@/lib/utils';
 
 import { transactionKindOptions, recurrenceOptions } from '../../constants';
@@ -45,6 +46,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
     cardAccountMap,
     toggleTag,
     handleSubmit,
+    resetForm,
     isCreating,
     isToAccountCreditSelected,
     filteredToCardOptions,
@@ -215,14 +217,22 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                   control={form.control}
                   name="category_id"
                   render={({ field }) => (
-                    <SelectField
-                      name="category_id"
-                      label="Categoria"
-                      options={categoryOptions}
-                      placeholder="Opcional"
-                      value={field.value ?? ''}
-                      onValueChange={field.onChange}
-                    />
+                    <div className="space-y-2">
+                      <ComboboxField
+                        name="category_id"
+                        label="Categoria"
+                        options={categoryOptions}
+                        placeholder="Selecione a categoria"
+                        value={field.value ?? ''}
+                        onValueChange={field.onChange}
+                        searchPlaceholder="Buscar categoria..."
+                        emptyMessage="Nenhuma categoria encontrada."
+                        required
+                      />
+                      {transactionErrors.category_id && (
+                        <p className="text-xs text-destructive">{transactionErrors.category_id.message}</p>
+                      )}
+                    </div>
                   )}
                 />
               </div>
@@ -567,9 +577,19 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
             <p className="text-xs text-muted-foreground">
               Dica: cadastre o essencial primeiro, depois refine nos detalhes se precisar.
             </p>
-            <Button type="submit" disabled={isCreating}>
-              {isCreating ? 'Salvando...' : 'Salvar lançamento'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetForm}
+                disabled={isCreating || !form.formState.isDirty}
+              >
+                Redefinir
+              </Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? 'Salvando...' : 'Salvar lançamento'}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>

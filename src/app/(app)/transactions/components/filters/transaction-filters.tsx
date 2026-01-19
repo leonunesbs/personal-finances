@@ -3,6 +3,7 @@
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/date-picker-field';
+import { ComboboxField } from '@/components/forms/combobox-field';
 
 import { EMPTY_SELECT_VALUE, FILTER_ALL_VALUE, transactionKindOptions } from '../../constants';
 
@@ -42,25 +43,24 @@ export function TransactionFilters(props: TransactionFiltersProps) {
   const categoryOptions = categories.map((category) => ({ value: category.id, label: category.name }));
   const accountOptions = accounts.map((account) => ({ value: account.id, label: account.name }));
 
+  const categoryFilterOptions = [
+    { value: FILTER_ALL_VALUE, label: 'Todas' },
+    { value: EMPTY_SELECT_VALUE, label: 'Sem categoria' },
+    ...categoryOptions,
+  ];
+
   return (
     <div className="mb-4 grid gap-3 md:grid-cols-5">
-      <div className="space-y-1">
-        <Label htmlFor="filter-category">Categoria</Label>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger id="filter-category">
-            <SelectValue placeholder="Todas" />
-          </SelectTrigger>
-          <SelectContent className="max-h-60 overflow-y-auto">
-            <SelectItem value={FILTER_ALL_VALUE}>Todas</SelectItem>
-            <SelectItem value={EMPTY_SELECT_VALUE}>Sem categoria</SelectItem>
-            {categoryOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ComboboxField
+        name="filter-category"
+        label="Categoria"
+        options={categoryFilterOptions}
+        placeholder="Todas"
+        value={categoryFilter}
+        onValueChange={setCategoryFilter}
+        searchPlaceholder="Buscar categoria..."
+        emptyMessage="Nenhuma categoria encontrada."
+      />
       <div className="space-y-1">
         <Label htmlFor="filter-kind">Tipo</Label>
         <Select value={kindFilter} onValueChange={setKindFilter}>

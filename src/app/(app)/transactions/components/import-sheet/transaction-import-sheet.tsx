@@ -1,6 +1,8 @@
 'use client';
 
 import { Controller } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,20 +16,94 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SelectField } from '@/components/forms/select-field';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatCurrency } from '@/lib/finance';
+import { cn } from '@/lib/utils';
 
 import { useImportTransactions } from './use-import-transactions';
 
 import type { Account, Category, CardItem } from '../../types';
+import type { ImportRow } from './import-types';
 
 type TransactionImportSheetProps = {
   accounts: Account[];
   categories: Category[];
   cards: CardItem[];
 };
+
+type ImportRowCategoryComboboxProps = {
+  row: ImportRow;
+  categoryOptions: { value: string; label: string }[];
+  onCategoryChange: (rowId: string, categoryId: string) => void;
+};
+
+function ImportRowCategoryCombobox({ row, categoryOptions, onCategoryChange }: ImportRowCategoryComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const selectedCategory = categoryOptions.find((option) => option.value === row.categoryId);
+
+  // Create a map to convert search value (label) back to actual value (id)
+  const labelToValueMap = useMemo(
+    () => new Map(categoryOptions.map((option) => [option.label.toLowerCase(), option.value])),
+    [categoryOptions],
+  );
+
+  return (
+    <TableRow>
+      <TableCell>{row.date}</TableCell>
+      <TableCell>{row.title}</TableCell>
+      <TableCell>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" role="combobox" aria-expanded={open} className="min-w-[180px] justify-between">
+              <span className="truncate">{selectedCategory ? selectedCategory.label : 'Selecione'}</span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="min-w-[180px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar categoria..." className="h-9" />
+              <CommandList>
+                <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                <CommandGroup>
+                  {categoryOptions.map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      value={option.label}
+                      keywords={[option.label]}
+                      onSelect={(currentLabel) => {
+                        const selectedValue = labelToValueMap.get(currentLabel.toLowerCase());
+                        if (selectedValue) {
+                          onCategoryChange(row.id, selectedValue);
+                        }
+                        setOpen(false);
+                      }}
+                    >
+                      {option.label}
+                      <Check
+                        className={cn('ml-auto h-4 w-4', row.categoryId === option.value ? 'opacity-100' : 'opacity-0')}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </TableCell>
+      <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.amount)}</TableCell>
+    </TableRow>
+  );
+}
 
 export function TransactionImportSheet(props: TransactionImportSheetProps) {
   const { accounts, categories, cards } = props;
@@ -184,28 +260,12 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
                     </TableHeader>
                     <TableBody>
                       {pagedImportRows.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell>{row.date}</TableCell>
-                          <TableCell>{row.title}</TableCell>
-                          <TableCell>
-                            <Select
-                              value={row.categoryId ?? ''}
-                              onValueChange={(value) => handleRowCategoryChange(row.id, value)}
-                            >
-                              <SelectTrigger className="min-w-[180px]">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-56 overflow-y-auto">
-                                {categoryOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.amount)}</TableCell>
-                        </TableRow>
+                        <ImportRowCategoryCombobox
+                          key={row.id}
+                          row={row}
+                          categoryOptions={categoryOptions}
+                          onCategoryChange={handleRowCategoryChange}
+                        />
                       ))}
                     </TableBody>
                   </Table>

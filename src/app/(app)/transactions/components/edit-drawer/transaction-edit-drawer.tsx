@@ -28,9 +28,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/forms/currency-input';
 import { DatePickerField } from '@/components/forms/date-picker-field';
+import { ComboboxField } from '@/components/forms/combobox-field';
 import { cn } from '@/lib/utils';
 
-import { EMPTY_SELECT_VALUE, transactionKindOptions } from '../../constants';
+import { transactionKindOptions } from '../../constants';
 import { useEditTransaction } from './use-edit-transaction';
 
 import type { Account, Category, CardItem, Transaction } from '../../types';
@@ -257,35 +258,29 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                     )}
                   </div>
                 )}
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <Controller
-                    control={editForm.control}
-                    name="category_id"
-                    render={({ field }) => (
-                      <Select
-                        value={field.value || EMPTY_SELECT_VALUE}
-                        onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? '' : value)}
+                <Controller
+                  control={editForm.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <div className="space-y-2">
+                      <ComboboxField
+                        name="category_id"
+                        label="Categoria"
+                        options={categoryOptions}
+                        placeholder="Selecione a categoria"
+                        value={field.value ?? ''}
+                        onValueChange={field.onChange}
                         disabled={isSaving}
-                      >
-                        <SelectTrigger className={cn(editErrors.category_id && 'border-destructive')}>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-56 overflow-y-auto">
-                          <SelectItem value={EMPTY_SELECT_VALUE}>Sem categoria</SelectItem>
-                          {categoryOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {editErrors.category_id && (
-                    <p className="text-xs text-destructive">{editErrors.category_id.message}</p>
+                        searchPlaceholder="Buscar categoria..."
+                        emptyMessage="Nenhuma categoria encontrada."
+                        required
+                      />
+                      {editErrors.category_id && (
+                        <p className="text-xs text-destructive">{editErrors.category_id.message}</p>
+                      )}
+                    </div>
                   )}
-                </div>
+                />
                 <div className="space-y-2">
                   <Label>Valor</Label>
                   <Controller

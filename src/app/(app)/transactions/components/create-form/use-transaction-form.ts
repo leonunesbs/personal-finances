@@ -218,6 +218,7 @@ export function useTransactionForm({ accounts, cards, onSuccess }: UseTransactio
     cardAccountMap,
     toggleTag,
     handleSubmit,
+    resetForm,
     isCreating,
     isToAccountCreditSelected,
     filteredToCardOptions,
