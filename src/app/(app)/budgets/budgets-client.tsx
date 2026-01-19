@@ -666,6 +666,7 @@ export function BudgetsClient({
                                     name={limitFieldName}
                                     value={typeof field.value === 'string' ? field.value : ''}
                                     onValueChange={field.onChange}
+                                    className="w-40"
                                   />
                                 )}
                               />
