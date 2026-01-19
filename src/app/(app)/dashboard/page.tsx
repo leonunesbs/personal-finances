@@ -1,14 +1,124 @@
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency, getMonthRange, getStatementDueDate, getStatementWindow } from "@/lib/finance";
+import { getBinInfo } from "@/lib/bin-info";
+import { addDays, formatCurrency, getMonthRange, getStatementDueDate, getStatementWindow } from "@/lib/finance";
 import { requireUser } from "@/lib/supabase/auth";
+import Image from "next/image";
+
+import { DashboardFilters } from "./dashboard-filters";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const { supabase } = await requireUser();
-  const now = new Date();
-  const { startLabel, endLabel } = getMonthRange(now);
+type DashboardPageProps = {
+  searchParams?:
+    | {
+        month?: string;
+        year?: string;
+      }
+    | Promise<{
+        month?: string;
+        year?: string;
+      }>;
+};
+
+type CardTheme = {
+  gradient: string;
+  overlay: string;
+  badge?: {
+    label: string;
+    className: string;
+  };
+};
+
+type CardBrand = {
+  src: string;
+  label: string;
+};
+
+const getCardBrand = (binInfo?: { cardType?: string | null; issuer?: string | null } | null): CardBrand | null => {
+  const cardType = (binInfo?.cardType ?? "").toLowerCase();
+  const issuer = (binInfo?.issuer ?? "").toLowerCase();
+  if (cardType.includes("visa") || issuer.includes("visa")) {
+    return { src: "/visa.png", label: "Visa" };
+  }
+  if (cardType.includes("mastercard") || issuer.includes("mastercard")) {
+    return { src: "/mastercard.png", label: "Mastercard" };
+  }
+  return null;
+};
+
+const getCardTheme = (binInfo?: { cardType?: string | null; issuer?: string | null } | null): CardTheme => {
+  const issuer = (binInfo?.issuer ?? "").toLowerCase();
+  const cardType = (binInfo?.cardType ?? "").toLowerCase();
+  const isNu = issuer.includes("nu pagamentos") || issuer.includes("nubank");
+  const isMastercardBlack = cardType.includes("mastercard") && cardType.includes("black");
+
+  if (isNu) {
+    return {
+      gradient: "bg-gradient-to-br from-[#820AD1] via-[#6B05B5] to-[#4A0785]",
+      overlay: "bg-white/20",
+      badge: isMastercardBlack
+        ? {
+            label: "Mastercard Black",
+            className: "bg-black/60 text-white",
+          }
+        : undefined,
+    };
+  }
+
+  if (isMastercardBlack) {
+    return {
+      gradient: "bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-700",
+      overlay: "bg-white/10",
+      badge: {
+        label: "Mastercard Black",
+        className: "bg-amber-200/90 text-amber-950",
+      },
+    };
+  }
+
+  return {
+    gradient: "bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700",
+    overlay: "bg-white/20",
+  };
+};
+
+const monthOptions = [
+  { value: 1, label: "Jan" },
+  { value: 2, label: "Fev" },
+  { value: 3, label: "Mar" },
+  { value: 4, label: "Abr" },
+  { value: 5, label: "Mai" },
+  { value: 6, label: "Jun" },
+  { value: 7, label: "Jul" },
+  { value: 8, label: "Ago" },
+  { value: 9, label: "Set" },
+  { value: 10, label: "Out" },
+  { value: 11, label: "Nov" },
+  { value: 12, label: "Dez" },
+];
+
+function resolveMonthYear(monthValue?: string, yearValue?: string) {
+  const today = new Date();
+  const month = Number.parseInt(monthValue ?? "", 10);
+  const year = Number.parseInt(yearValue ?? "", 10);
+  const resolvedMonth = Number.isFinite(month) && month >= 1 && month <= 12 ? month : today.getMonth() + 1;
+  const resolvedYear = Number.isFinite(year) && year >= 1900 && year <= 2100 ? year : today.getFullYear();
+  const daysInMonth = new Date(resolvedYear, resolvedMonth, 0).getDate();
+  const day = Math.min(today.getDate(), daysInMonth);
+  return new Date(resolvedYear, resolvedMonth - 1, day);
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const { supabase, user } = await requireUser();
+  const resolvedSearchParams = await searchParams;
+  const selectedDate = resolveMonthYear(resolvedSearchParams?.month, resolvedSearchParams?.year);
+  const now = selectedDate;
+  const { startLabel, endLabel } = getMonthRange(selectedDate);
+  const selectedMonth = selectedDate.getMonth() + 1;
+  const selectedYear = selectedDate.getFullYear();
+  const yearOptions = Array.from({ length: 5 }, (_, index) => selectedYear - 2 + index);
+  const monthLabel = selectedDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   const { data: monthTransactions } = await supabase
     .from("transactions")
@@ -43,20 +153,80 @@ export default async function DashboardPage() {
     .from("transactions")
     .select("amount, kind, account_id, to_account_id");
 
+  const { data: debtInstallments } = await supabase
+    .from("debt_installments")
+    .select("amount, due_on, status")
+    .order("due_on", { ascending: true });
+
+  const { data: transactionInstallments } = await supabase
+    .from("transaction_installments")
+    .select("amount, due_on, paid")
+    .order("due_on", { ascending: true });
+
+  const { data: recurringRules } = await supabase
+    .from("recurring_rules")
+    .select("amount, next_run_on, active, end_on, kind")
+    .eq("active", true);
+
   const { data: cards } = await supabase
     .from("cards")
-    .select("id, name, last4, closing_day, due_day, limit_amount, account_id")
+    .select(
+      "id, name, first6, last4, closing_day, due_day, limit_amount, account_id, bin_card_type, bin_issuer, bin_country"
+    )
     .eq("archived", false);
 
-  const cardWindows = (cards ?? []).map((card) => ({
+  const cardRows = cards ?? [];
+  const cardsNeedingBin = cardRows.filter(
+    (card) => card.first6 && !card.bin_card_type && !card.bin_issuer && !card.bin_country
+  );
+  const missingBins = Array.from(
+    new Set(cardsNeedingBin.map((card) => card.first6).filter((value): value is string => Boolean(value)))
+  );
+  const binInfoEntries =
+    missingBins.length > 0
+      ? await Promise.all(missingBins.map(async (bin) => [bin, await getBinInfo(bin)] as const))
+      : [];
+  const binInfoByFirst6 = new Map(binInfoEntries);
+
+  if (binInfoEntries.length > 0) {
+    await Promise.all(
+      binInfoEntries.map(async ([bin, info]) => {
+        if (!info) return;
+        await supabase
+          .from("cards")
+          .update({
+            bin_card_type: info.cardType,
+            bin_issuer: info.issuer,
+            bin_country: info.country,
+          })
+          .eq("user_id", user.id)
+          .eq("first6", bin);
+      })
+    );
+  }
+
+  const cardWindows = cardRows.map((card) => ({
     cardId: card.id,
     name: card.name,
+    first6: card.first6,
     last4: card.last4,
     limitAmount: Number(card.limit_amount ?? 0),
     accountId: card.account_id,
     closingDay: card.closing_day,
     dueDay: card.due_day,
     window: getStatementWindow(card.closing_day, now),
+    binInfo: (() => {
+      const fromDb = card.bin_card_type || card.bin_issuer || card.bin_country;
+      if (fromDb) {
+        return {
+          cardType: card.bin_card_type ?? null,
+          issuer: card.bin_issuer ?? null,
+          country: card.bin_country ?? null,
+        };
+      }
+      const fetched = card.first6 ? binInfoByFirst6.get(card.first6) : null;
+      return fetched ?? null;
+    })(),
   }));
 
   const cardStartLabels = cardWindows.map(({ window }) => window.startLabel);
@@ -70,7 +240,7 @@ export default async function DashboardPage() {
     minCardStart && maxCardEnd && cardIds.length > 0
       ? await supabase
           .from("transactions")
-          .select("amount, card_id, occurred_on, kind, to_account_id")
+          .select("amount, card_id, occurred_on, kind, to_account_id, is_bill_payment")
           .in("kind", ["expense", "transfer"])
           .in("card_id", cardIds)
           .gte("occurred_on", minCardStart)
@@ -99,6 +269,57 @@ export default async function DashboardPage() {
   const remainingDays = Math.max(daysInMonth - now.getDate() + 1, 1);
   const dailyAllowance = remainingDays > 0 ? remaining / remainingDays : 0;
   const saved = totals.income - totals.expense - totals.investmentContribution;
+
+  const today = new Date();
+  const todayStart = new Date(today);
+  todayStart.setHours(0, 0, 0, 0);
+  const recurringWindowEnd = addDays(todayStart, 30);
+
+  const parseDateValue = (value?: string | null) => {
+    if (!value) return null;
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const formatShortDate = (value?: string | null) => {
+    const parsed = parseDateValue(value);
+    return parsed ? parsed.toLocaleDateString("pt-BR") : "Sem vencimentos";
+  };
+
+  const upcomingDebtInstallments = (debtInstallments ?? []).filter((installment) => {
+    const dueDate = parseDateValue(installment.due_on);
+    if (!dueDate) return false;
+    if (installment.status === "paid" || installment.status === "cancelled") return false;
+    return dueDate >= todayStart && dueDate <= recurringWindowEnd;
+  });
+  const upcomingDebtAmount = upcomingDebtInstallments.reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
+  const nextDebtDue = upcomingDebtInstallments
+    .map((item) => parseDateValue(item.due_on))
+    .filter((value): value is Date => Boolean(value))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  const activeRecurringRules = (recurringRules ?? []).filter((rule) => {
+    if (!rule.active) return false;
+    if (rule.kind !== "expense") return false;
+    const endOn = parseDateValue(rule.end_on);
+    return !endOn || endOn >= todayStart;
+  });
+  const upcomingRecurring = activeRecurringRules.filter((rule) => {
+    const nextRun = parseDateValue(rule.next_run_on);
+    return nextRun ? nextRun >= todayStart && nextRun <= recurringWindowEnd : false;
+  });
+  const upcomingRecurringAmount = upcomingRecurring.reduce((sum, rule) => sum + Number(rule.amount ?? 0), 0);
+  const nextRecurringDue = activeRecurringRules
+    .map((rule) => parseDateValue(rule.next_run_on))
+    .filter((value): value is Date => Boolean(value))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  const activeInstallments = (transactionInstallments ?? []).filter((installment) => !installment.paid);
+  const activeInstallmentsAmount = activeInstallments.reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
+  const nextInstallmentDue = activeInstallments
+    .map((item) => parseDateValue(item.due_on))
+    .filter((value): value is Date => Boolean(value))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
 
   const categoryNameById = new Map((categories ?? []).map((category) => [category.id, category.name]));
   const expenseByCategory = new Map<string, number>();
@@ -185,7 +406,9 @@ export default async function DashboardPage() {
         return;
       }
       if (txn.kind === "transfer" && accountId && txn.to_account_id === accountId) {
-        paid += amount;
+        if (txn.is_bill_payment) {
+          paid += amount;
+        }
       }
     });
     cardSpendById.set(cardId, spent);
@@ -200,6 +423,9 @@ export default async function DashboardPage() {
     const usage = card.limitAmount > 0 ? Math.min(outstanding / card.limitAmount, 1) : 0;
     const dueDate = getStatementDueDate(card.window.closingDate, card.dueDay);
     const isOverLimit = card.limitAmount > 0 && outstanding > card.limitAmount;
+    const binLabel = [card.binInfo?.cardType, card.binInfo?.issuer].filter(Boolean).join(" • ");
+    const theme = getCardTheme(card.binInfo);
+    const brand = getCardBrand(card.binInfo);
     return {
       ...card,
       spent,
@@ -209,14 +435,25 @@ export default async function DashboardPage() {
       usage,
       dueDate,
       isOverLimit,
+      binLabel,
+      theme,
+      brand,
     };
   });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Resumo do mês</h1>
-        <p className="text-sm">Acompanhe receitas, despesas e investimentos.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Resumo do mês</h1>
+          <p className="text-sm text-muted-foreground capitalize">{monthLabel}</p>
+        </div>
+        <DashboardFilters
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          yearOptions={yearOptions}
+          monthOptions={monthOptions}
+        />
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-emerald-200/60 bg-emerald-50/40">
@@ -224,27 +461,18 @@ export default async function DashboardPage() {
             <CardDescription>Receitas</CardDescription>
             <CardTitle className="text-emerald-600">{formatCurrency(totals.income, "BRL")}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm">Meta: {formatCurrency(budget?.income_target ?? 0, "BRL")}</p>
-          </CardContent>
         </Card>
         <Card className="border-rose-200/60 bg-rose-50/40">
           <CardHeader>
             <CardDescription>Despesas</CardDescription>
             <CardTitle className="text-rose-600">{formatCurrency(totals.expense, "BRL")}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm">Limite: {formatCurrency(expenseLimit, "BRL")}</p>
-          </CardContent>
         </Card>
         <Card className="border-emerald-200/60 bg-emerald-50/40">
           <CardHeader>
             <CardDescription>Investimentos</CardDescription>
             <CardTitle className="text-emerald-600">{formatCurrency(totals.investmentContribution, "BRL")}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm">Meta: {formatCurrency(investmentTarget, "BRL")}</p>
-          </CardContent>
         </Card>
         <Card className={remaining > 0 ? "border-emerald-200/60 bg-emerald-50/40" : "border-rose-200/60 bg-rose-50/40"}>
           <CardHeader>
@@ -253,10 +481,34 @@ export default async function DashboardPage() {
               {formatCurrency(dailyAllowance, "BRL")}
             </CardTitle>
           </CardHeader>
+        </Card>
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dívidas futuras</CardTitle>
+          </CardHeader>
           <CardContent>
-            <p className="text-sm">
-              Restante: {formatCurrency(remaining, "BRL")} em {remainingDays} dias
-            </p>
+            <p className="text-2xl font-semibold">{formatCurrency(upcomingDebtAmount, "BRL")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Parcelas: {upcomingDebtInstallments.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Assinaturas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{formatCurrency(upcomingRecurringAmount, "BRL")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Ativas: {activeRecurringRules.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Parcelamentos ativos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{formatCurrency(activeInstallmentsAmount, "BRL")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Em aberto: {activeInstallments.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -264,7 +516,6 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Comprometimento do orçamento</CardTitle>
-            <CardDescription>Gasto em relação ao limite mensal.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <p className={budgetCommitment <= 1 ? "text-2xl font-semibold text-emerald-600" : "text-2xl font-semibold text-rose-600"}>
@@ -279,15 +530,13 @@ export default async function DashboardPage() {
               </div>
             )}
             <p className="text-sm">
-              Gasto: {formatCurrency(totals.expense, "BRL")} · Limite: {formatCurrency(expenseLimit, "BRL")}
+              {formatCurrency(totals.expense, "BRL")} / {formatCurrency(expenseLimit, "BRL")}
             </p>
-            <p className="text-sm">Restante: {formatCurrency(remaining, "BRL")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Categorias com maiores despesas</CardTitle>
-            <CardDescription>Top categorias do mês atual.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {topCategories.length > 0 ? (
@@ -306,7 +555,6 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Cartões de crédito</CardTitle>
-          <CardDescription>Resumo da fatura atual por cartão.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {cardSummaries.length > 0 ? (
@@ -315,17 +563,42 @@ export default async function DashboardPage() {
                 <CarouselContent>
                   {cardSummaries.map((card) => (
                     <CarouselItem key={card.cardId} className="basis-full">
-                      <div className="space-y-4">
-                        <div className="relative overflow-hidden rounded-2xl border border-white/40 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 p-5 text-white shadow-sm">
-                          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/20 blur-2xl" />
+                      <div className="grid gap-4 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)] lg:items-start">
+                        <div
+                          className={`relative mx-auto aspect-[1.586] w-full max-w-[480px] overflow-hidden rounded-2xl border border-white/40 p-5 text-white shadow-sm ${card.theme.gradient}`}
+                        >
+                          <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl ${card.theme.overlay}`} />
                           <div className="flex items-center justify-between text-sm text-white/80">
                             <span>Cartão</span>
-                            <span>{card.name}</span>
-                          </div>
-                          <div className="mt-4 flex items-center justify-between">
-                            <div className="rounded-md border border-white/30 bg-white/10 px-3 py-2 text-xs uppercase tracking-widest text-white/80">
-                              Chip
+                            <div className="flex items-center gap-2">
+                              {card.brand && (
+                                <Image
+                                  src={card.brand.src}
+                                  alt={card.brand.label}
+                                  width={48}
+                                  height={20}
+                                  className="h-5 w-auto object-contain"
+                                />
+                              )}
+                              <span>{card.name}</span>
                             </div>
+                          </div>
+                          {card.binLabel && <p className="mt-1 text-xs text-white/70">{card.binLabel}</p>}
+                          {card.theme.badge && (
+                            <span
+                              className={`mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${card.theme.badge.className}`}
+                            >
+                              {card.theme.badge.label}
+                            </span>
+                          )}
+                          <div className="mt-4 flex items-center justify-between">
+                            <Image
+                              src="/chip.png"
+                              alt="Chip"
+                              width={64}
+                              height={42}
+                              className="h-10 w-auto rounded-md border border-white/30 bg-white/10 px-2 py-1"
+                            />
                             <div className="text-sm text-white/80">
                               {card.last4 ? `•••• ${card.last4}` : "**** ****"}
                             </div>
@@ -351,47 +624,65 @@ export default async function DashboardPage() {
                               {formatCurrency(card.remainingLimit, "BRL")}
                             </span>
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center justify-between text-muted-foreground">
-                            <span>
-                              Fatura: {card.window.start.toLocaleDateString("pt-BR")} a{" "}
-                              {card.window.end.toLocaleDateString("pt-BR")}
-                            </span>
+                          <div className="mt-3 grid gap-2 text-muted-foreground sm:grid-cols-2">
                             <span>Fecha em {card.window.closingDate.toLocaleDateString("pt-BR")}</span>
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center justify-between text-muted-foreground">
-                            <span>Vence em {card.dueDate.toLocaleDateString("pt-BR")}</span>
-                            <span>Disponível: {formatCurrency(card.remainingLimit, "BRL")}</span>
+                            <span className="sm:text-right">Vence em {card.dueDate.toLocaleDateString("pt-BR")}</span>
                           </div>
                         </div>
                       </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious />
-                <CarouselNext />
+                <CarouselPrevious className="left-4 sm:left-6" />
+                <CarouselNext className="right-4 sm:right-6" />
               </Carousel>
             ) : (
               <div className="space-y-4">
                 {cardSummaries.map((card) => (
-                  <div key={card.cardId} className="space-y-4">
-                    <div className="relative overflow-hidden rounded-2xl border border-white/40 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 p-5 text-white shadow-sm">
-                      <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/20 blur-2xl" />
+                  <div key={card.cardId} className="grid gap-4 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)] lg:items-start">
+                    <div
+                      className={`relative mx-auto aspect-[1.586] w-full max-w-[480px] overflow-hidden rounded-2xl border border-white/40 p-5 text-white shadow-sm ${card.theme.gradient}`}
+                    >
+                      <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl ${card.theme.overlay}`} />
                       <div className="flex items-center justify-between text-sm text-white/80">
                         <span>Cartão</span>
-                        <span>{card.name}</span>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between">
-                        <div className="rounded-md border border-white/30 bg-white/10 px-3 py-2 text-xs uppercase tracking-widest text-white/80">
-                          Chip
+                        <div className="flex items-center gap-2">
+                          {card.brand && (
+                            <Image
+                              src={card.brand.src}
+                              alt={card.brand.label}
+                              width={48}
+                              height={20}
+                              className="h-5 w-auto object-contain"
+                            />
+                          )}
+                          <span>{card.name}</span>
                         </div>
+                      </div>
+                      {card.binLabel && <p className="mt-1 text-xs text-white/70">{card.binLabel}</p>}
+                      {card.theme.badge && (
+                        <span
+                          className={`mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${card.theme.badge.className}`}
+                        >
+                          {card.theme.badge.label}
+                        </span>
+                      )}
+                      <div className="mt-4 flex items-center justify-between">
+                        <Image
+                          src="/chip.png"
+                          alt="Chip"
+                          width={64}
+                          height={42}
+                          className="h-10 w-auto rounded-md border border-white/30 bg-white/10 px-2 py-1"
+                        />
                         <div className="text-sm text-white/80">
                           {card.last4 ? `•••• ${card.last4}` : "**** ****"}
                         </div>
                       </div>
-                    <div className="mt-6 space-y-2">
-                      <p className="text-xs uppercase tracking-wider text-white/70">Fatura atual</p>
-                      <p className="text-2xl font-semibold">{formatCurrency(card.outstanding, "BRL")}</p>
-                    </div>
+                      <div className="mt-6 space-y-2">
+                        <p className="text-xs uppercase tracking-wider text-white/70">Fatura atual</p>
+                        <p className="text-2xl font-semibold">{formatCurrency(card.outstanding, "BRL")}</p>
+                      </div>
                       <div className="mt-4">
                         <div className="h-2 w-full rounded-full bg-white/20">
                           <div className="h-2 rounded-full bg-white/80" style={{ width: `${card.usage * 100}%` }} />
@@ -409,16 +700,9 @@ export default async function DashboardPage() {
                           {formatCurrency(card.remainingLimit, "BRL")}
                         </span>
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center justify-between text-muted-foreground">
-                        <span>
-                          Fatura: {card.window.start.toLocaleDateString("pt-BR")} a{" "}
-                          {card.window.end.toLocaleDateString("pt-BR")}
-                        </span>
+                      <div className="mt-3 grid gap-2 text-muted-foreground sm:grid-cols-2">
                         <span>Fecha em {card.window.closingDate.toLocaleDateString("pt-BR")}</span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center justify-between text-muted-foreground">
-                        <span>Vence em {card.dueDate.toLocaleDateString("pt-BR")}</span>
-                        <span>Disponível: {formatCurrency(card.remainingLimit, "BRL")}</span>
+                        <span className="sm:text-right">Vence em {card.dueDate.toLocaleDateString("pt-BR")}</span>
                       </div>
                     </div>
                   </div>
@@ -433,7 +717,6 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Orçamento por categoria</CardTitle>
-          <CardDescription>Limites e gastos do mês atual.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {budgetItemsWithSpend.length > 0 ? (
@@ -466,7 +749,6 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Economia do mês</CardTitle>
-          <CardDescription>Saldo após despesas e investimentos.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className={saved >= 0 ? "text-2xl font-semibold text-emerald-600" : "text-2xl font-semibold text-rose-600"}>
@@ -477,11 +759,9 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Saldo das contas</CardTitle>
-          <CardDescription>Total das contas cadastradas.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-semibold">{formatCurrency(accountsBalanceTotal, "BRL")}</p>
-          <p className="mt-2 text-sm text-muted-foreground">{accounts?.length ?? 0} conta(s) cadastrada(s)</p>
         </CardContent>
       </Card>
     </div>
