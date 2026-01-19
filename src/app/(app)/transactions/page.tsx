@@ -12,7 +12,7 @@ export default async function TransactionsPage() {
     .from('transactions')
     .select('*')
     .order('occurred_on', { ascending: false })
-    .limit(50);
+    .limit(100);
   const transactionIds = (transactions.data ?? []).map((transaction) => transaction.id);
   const transactionInstallmentsPromise = transactionIds.length
     ? supabase
