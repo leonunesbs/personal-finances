@@ -1,20 +1,23 @@
-"use client";
+'use client';
 
-import { Controller } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { CurrencyInput } from "@/components/forms/currency-input";
-import { DatePickerField } from "@/components/forms/date-picker-field";
-import { SelectField } from "@/components/forms/select-field";
-import { cn } from "@/lib/utils";
-import { transactionKindOptions, recurrenceOptions } from "../../constants";
-import { useTransactionForm } from "./use-transaction-form";
-import type { Account, Category, CardItem, Tag } from "../../types";
+import { Controller } from 'react-hook-form';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { CurrencyInput } from '@/components/forms/currency-input';
+import { DatePickerField } from '@/components/forms/date-picker-field';
+import { SelectField } from '@/components/forms/select-field';
+import { cn } from '@/lib/utils';
+
+import { transactionKindOptions, recurrenceOptions } from '../../constants';
+import { useTransactionForm } from './use-transaction-form';
+
+import type { Account, Category, CardItem, Tag } from '../../types';
 
 type TransactionCreateFormProps = {
   accounts: Account[];
@@ -50,7 +53,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
   const accountOptions = accounts.map((account) => ({ value: account.id, label: account.name }));
   const categoryOptions = categories.map((category) => ({ value: category.id, label: category.name }));
   const transactionErrors = form.formState.errors;
-  const isTransfer = transactionKind === "transfer";
+  const isTransfer = transactionKind === 'transfer';
 
   return (
     <Card>
@@ -71,9 +74,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
             <section className="space-y-4 rounded-xl border bg-card p-4">
               <div className="space-y-1">
                 <h2 className="text-sm font-semibold">Essencial</h2>
-                <p className="text-xs text-muted-foreground">
-                  Comece pelo básico para registrar rápido.
-                </p>
+                <p className="text-xs text-muted-foreground">Comece pelo básico para registrar rápido.</p>
               </div>
               <Separator />
               <div className="grid gap-4 md:grid-cols-2">
@@ -88,8 +89,8 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                         <label
                           key={option.value}
                           className={cn(
-                            "flex h-full cursor-pointer items-center gap-3 rounded-lg border p-3 transition hover:border-primary/60 hover:bg-muted/40 md:min-h-[92px]",
-                            isSelected && "border-primary bg-primary/10 shadow-sm"
+                            'flex h-full cursor-pointer items-center gap-3 rounded-lg border p-3 transition hover:border-primary/60 hover:bg-muted/40 md:min-h-[92px]',
+                            isSelected && 'border-primary bg-primary/10 shadow-sm',
                           )}
                         >
                           <input
@@ -97,7 +98,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                             value={option.value}
                             checked={isSelected}
                             onChange={() =>
-                              form.setValue("kind", option.value, {
+                              form.setValue('kind', option.value, {
                                 shouldValidate: true,
                                 shouldDirty: true,
                               })
@@ -106,11 +107,11 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                           />
                           <div
                             className={cn(
-                              "flex h-9 w-9 items-center justify-center rounded-md border bg-background",
-                              isSelected && "border-primary bg-primary/10 text-primary"
+                              'flex h-9 w-9 items-center justify-center rounded-md border bg-background',
+                              isSelected && 'border-primary bg-primary/10 text-primary',
                             )}
                           >
-                            <Icon className={cn("h-4 w-4", isSelected ? "text-primary" : "text-muted-foreground")} />
+                            <Icon className={cn('h-4 w-4', isSelected ? 'text-primary' : 'text-muted-foreground')} />
                           </div>
                           <div className="flex flex-1 flex-col gap-1">
                             <p className="text-sm font-medium">{option.label}</p>
@@ -129,8 +130,8 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                   <Input
                     id="description"
                     placeholder="Ex: Supermercado, salário, aluguel"
-                    {...form.register("description")}
-                    className={cn(transactionErrors.description && "border-destructive")}
+                    {...form.register('description')}
+                    className={cn(transactionErrors.description && 'border-destructive')}
                   />
                   {transactionErrors.description && (
                     <p className="text-xs text-destructive">{transactionErrors.description.message}</p>
@@ -145,18 +146,16 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                       <CurrencyInput
                         id="amount"
                         name="amount"
-                        value={field.value ?? ""}
+                        value={field.value ?? ''}
                         onValueChange={field.onChange}
-                        className={cn(transactionErrors.amount && "border-destructive")}
+                        className={cn(transactionErrors.amount && 'border-destructive')}
                       />
                     )}
                   />
                   {transactionErrors.amount && (
                     <p className="text-xs text-destructive">{transactionErrors.amount.message}</p>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    Use valores positivos. O tipo define o sentido.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Use valores positivos. O tipo define o sentido.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="occurred_on">Data</Label>
@@ -169,7 +168,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                         name="occurred_on"
                         value={field.value}
                         onChange={field.onChange}
-                        className={cn(transactionErrors.occurred_on && "border-destructive")}
+                        className={cn(transactionErrors.occurred_on && 'border-destructive')}
                       />
                     )}
                   />
@@ -185,33 +184,31 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                       name="account_id"
                       label="Conta"
                       options={accountOptions}
-                      value={field.value ?? ""}
+                      value={field.value ?? ''}
                       disabled={isAccountLocked}
                       onValueChange={(nextAccountId) => {
                         field.onChange(nextAccountId);
                         const nextAccountType = accountTypeMap.get(nextAccountId);
-                        if (nextAccountType === "credit") {
-                          const nextCardAccountId = form.getValues("card_id")
-                            ? cardAccountMap.get(form.getValues("card_id") ?? "") ?? ""
-                            : "";
+                        if (nextAccountType === 'credit') {
+                          const nextCardAccountId = form.getValues('card_id')
+                            ? (cardAccountMap.get(form.getValues('card_id') ?? '') ?? '')
+                            : '';
                           if (nextCardAccountId !== nextAccountId) {
-                            form.setValue("card_id", "", { shouldValidate: true });
-                            form.setValue("is_recurring", false, { shouldValidate: true });
-                            form.setValue("show_installments", false, { shouldValidate: true });
+                            form.setValue('card_id', '', { shouldValidate: true });
+                            form.setValue('is_recurring', false, { shouldValidate: true });
+                            form.setValue('show_installments', false, { shouldValidate: true });
                           }
                         } else {
-                          form.setValue("card_id", "", { shouldValidate: true });
-                          form.setValue("is_recurring", false, { shouldValidate: true });
-                          form.setValue("show_installments", false, { shouldValidate: true });
+                          form.setValue('card_id', '', { shouldValidate: true });
+                          form.setValue('is_recurring', false, { shouldValidate: true });
+                          form.setValue('show_installments', false, { shouldValidate: true });
                         }
                       }}
                     />
                   )}
                 />
                 {transactionErrors.account_id && (
-                  <p className="text-xs text-destructive md:col-span-2">
-                    {transactionErrors.account_id.message}
-                  </p>
+                  <p className="text-xs text-destructive md:col-span-2">{transactionErrors.account_id.message}</p>
                 )}
                 <Controller
                   control={form.control}
@@ -222,7 +219,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                       label="Categoria"
                       options={categoryOptions}
                       placeholder="Opcional"
-                      value={field.value ?? ""}
+                      value={field.value ?? ''}
                       onValueChange={field.onChange}
                     />
                   )}
@@ -238,7 +235,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
               </div>
               <Separator />
               <div className="grid gap-4 md:grid-cols-2">
-                {transactionKind === "transfer" ? (
+                {transactionKind === 'transfer' ? (
                   <>
                     <Controller
                       control={form.control}
@@ -248,12 +245,12 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                           name="to_account_id"
                           label="Conta destino"
                           options={accountOptions}
-                          value={field.value ?? ""}
+                          value={field.value ?? ''}
                           onValueChange={(nextAccountId) => {
                             field.onChange(nextAccountId);
                             const nextAccountType = accountTypeMap.get(nextAccountId);
-                            if (nextAccountType !== "credit") {
-                              form.setValue("to_card_id", "", { shouldValidate: true });
+                            if (nextAccountType !== 'credit') {
+                              form.setValue('to_card_id', '', { shouldValidate: true });
                             }
                           }}
                         />
@@ -274,9 +271,9 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                               name="to_card_id"
                               label="Cartão destino"
                               options={filteredToCardOptions}
-                              placeholder={isToAccountCreditSelected ? "Obrigatório" : "Selecione a conta"}
-                              value={field.value ?? ""}
-                              disabled={!form.getValues("to_account_id") || !isToAccountCreditSelected}
+                              placeholder={isToAccountCreditSelected ? 'Obrigatório' : 'Selecione a conta'}
+                              value={field.value ?? ''}
+                              disabled={!form.getValues('to_account_id') || !isToAccountCreditSelected}
                               onValueChange={field.onChange}
                             />
                           )}
@@ -337,20 +334,20 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                           name="card_id"
                           label="Cartão"
                           options={filteredCardOptions}
-                          placeholder={isCreditAccountSelected ? "Obrigatório" : "Selecione a conta"}
-                          value={field.value ?? ""}
-                          disabled={!form.getValues("account_id") || !isCreditAccountSelected}
+                          placeholder={isCreditAccountSelected ? 'Obrigatório' : 'Selecione a conta'}
+                          value={field.value ?? ''}
+                          disabled={!form.getValues('account_id') || !isCreditAccountSelected}
                           onValueChange={(nextCardId) => {
                             field.onChange(nextCardId);
-                            const nextLinkedAccountId = cardAccountMap.get(nextCardId) ?? "";
+                            const nextLinkedAccountId = cardAccountMap.get(nextCardId) ?? '';
                             if (nextLinkedAccountId) {
-                              form.setValue("account_id", nextLinkedAccountId, {
+                              form.setValue('account_id', nextLinkedAccountId, {
                                 shouldValidate: true,
                               });
                             }
                             if (!nextCardId) {
-                              form.setValue("is_recurring", false, { shouldValidate: true });
-                              form.setValue("show_installments", false, { shouldValidate: true });
+                              form.setValue('is_recurring', false, { shouldValidate: true });
+                              form.setValue('show_installments', false, { shouldValidate: true });
                             }
                           }}
                         />
@@ -360,14 +357,10 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                       <p className="text-xs text-destructive">{transactionErrors.card_id.message}</p>
                     )}
                     {isCreditAccountSelected && (
-                      <p className="text-xs text-muted-foreground">
-                        Selecione um cartão vinculado a esta conta.
-                      </p>
+                      <p className="text-xs text-muted-foreground">Selecione um cartão vinculado a esta conta.</p>
                     )}
                     {isCreditAccountSelected && filteredCardOptions.length === 0 && (
-                      <p className="text-xs text-destructive">
-                        Nenhum cartão vinculado à conta selecionada.
-                      </p>
+                      <p className="text-xs text-destructive">Nenhum cartão vinculado à conta selecionada.</p>
                     )}
                   </div>
                 )}
@@ -380,7 +373,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                           id="installments-enabled"
                           checked={showInstallments}
                           onCheckedChange={(value) =>
-                            form.setValue("show_installments", Boolean(value), { shouldValidate: true })
+                            form.setValue('show_installments', Boolean(value), { shouldValidate: true })
                           }
                         />
                         <Label htmlFor="installments-enabled" className="cursor-pointer">
@@ -392,7 +385,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                           id="recurrence-enabled"
                           checked={isRecurring}
                           onCheckedChange={(value) =>
-                            form.setValue("is_recurring", Boolean(value), { shouldValidate: true })
+                            form.setValue('is_recurring', Boolean(value), { shouldValidate: true })
                           }
                         />
                         <Label htmlFor="recurrence-enabled" className="cursor-pointer">
@@ -416,7 +409,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                   <Textarea
                     id="notes"
                     placeholder="Algum detalhe extra para lembrar depois?"
-                    {...form.register("notes")}
+                    {...form.register('notes')}
                   />
                 </div>
                 {showInstallments && (
@@ -431,16 +424,14 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                         type="number"
                         min={2}
                         placeholder="Ex: 3"
-                        {...form.register("installments")}
-                        className={cn(transactionErrors.installments && "border-destructive")}
+                        {...form.register('installments')}
+                        className={cn(transactionErrors.installments && 'border-destructive')}
                         required
                       />
                       {transactionErrors.installments && (
                         <p className="text-xs text-destructive">{transactionErrors.installments.message}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        Mínimo de 2 parcelas
-                      </p>
+                      <p className="text-xs text-muted-foreground">Mínimo de 2 parcelas</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="first_installment_on" className="flex items-center gap-1">
@@ -456,16 +447,14 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                             name="first_installment_on"
                             value={field.value}
                             onChange={field.onChange}
-                            className={cn(transactionErrors.first_installment_on && "border-destructive")}
+                            className={cn(transactionErrors.first_installment_on && 'border-destructive')}
                           />
                         )}
                       />
                       {transactionErrors.first_installment_on && (
                         <p className="text-xs text-destructive">{transactionErrors.first_installment_on.message}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        Data de vencimento da 1ª parcela
-                      </p>
+                      <p className="text-xs text-muted-foreground">Data de vencimento da 1ª parcela</p>
                     </div>
                   </>
                 )}
@@ -478,8 +467,8 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                         <div
                           key={tag.id}
                           className={cn(
-                            "flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition",
-                            isSelected && "border-primary bg-primary/10 text-primary"
+                            'flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition',
+                            isSelected && 'border-primary bg-primary/10 text-primary',
                           )}
                         >
                           <Checkbox
@@ -501,9 +490,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
               <section className="space-y-4 rounded-xl border bg-card p-4">
                 <div className="space-y-1">
                   <h2 className="text-sm font-semibold">Recorrência</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Configure se o lançamento se repete.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Configure se o lançamento se repete.</p>
                 </div>
                 <Separator />
                 <div className="space-y-4">
@@ -519,7 +506,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                           name="recurrence_frequency"
                           label="Frequência"
                           options={recurrenceOptions}
-                          value={field.value ?? ""}
+                          value={field.value ?? ''}
                           onValueChange={field.onChange}
                         />
                       )}
@@ -535,8 +522,8 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                         id="recurrence_interval"
                         type="number"
                         min={1}
-                        {...form.register("recurrence_interval")}
-                        className={cn(transactionErrors.recurrence_interval && "border-destructive")}
+                        {...form.register('recurrence_interval')}
+                        className={cn(transactionErrors.recurrence_interval && 'border-destructive')}
                       />
                       {transactionErrors.recurrence_interval && (
                         <p className="text-xs text-destructive">{transactionErrors.recurrence_interval.message}</p>
@@ -548,8 +535,8 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
                         id="recurrence_occurrences"
                         type="number"
                         min={1}
-                        {...form.register("recurrence_occurrences")}
-                        className={cn(transactionErrors.recurrence_occurrences && "border-destructive")}
+                        {...form.register('recurrence_occurrences')}
+                        className={cn(transactionErrors.recurrence_occurrences && 'border-destructive')}
                       />
                       {transactionErrors.recurrence_occurrences && (
                         <p className="text-xs text-destructive">{transactionErrors.recurrence_occurrences.message}</p>
@@ -580,7 +567,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
               Dica: cadastre o essencial primeiro, depois refine nos detalhes se precisar.
             </p>
             <Button type="submit" disabled={isCreating}>
-              {isCreating ? "Salvando..." : "Salvar lançamento"}
+              {isCreating ? 'Salvando...' : 'Salvar lançamento'}
             </Button>
           </div>
         </form>

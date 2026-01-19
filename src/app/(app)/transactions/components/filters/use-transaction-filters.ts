@@ -1,14 +1,16 @@
-import { useMemo, useState } from "react";
-import { isValid, parseISO } from "date-fns";
-import { EMPTY_SELECT_VALUE, FILTER_ALL_VALUE } from "../../constants";
-import type { Transaction } from "../../types";
+import { useMemo, useState } from 'react';
+import { isValid, parseISO } from 'date-fns';
+
+import { EMPTY_SELECT_VALUE, FILTER_ALL_VALUE } from '../../constants';
+
+import type { Transaction } from '../../types';
 
 export function useTransactionFilters(transactions: Transaction[]) {
   const [categoryFilter, setCategoryFilter] = useState(FILTER_ALL_VALUE);
   const [kindFilter, setKindFilter] = useState(FILTER_ALL_VALUE);
   const [accountFilter, setAccountFilter] = useState(FILTER_ALL_VALUE);
-  const [dateRangeStart, setDateRangeStart] = useState("");
-  const [dateRangeEnd, setDateRangeEnd] = useState("");
+  const [dateRangeStart, setDateRangeStart] = useState('');
+  const [dateRangeEnd, setDateRangeEnd] = useState('');
 
   const parseFilterDate = (value?: string) => {
     if (!value) return null;
@@ -23,26 +25,15 @@ export function useTransactionFilters(transactions: Transaction[]) {
       ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime()
       : null;
     const endTime = endDate
-      ? new Date(
-          endDate.getFullYear(),
-          endDate.getMonth(),
-          endDate.getDate(),
-          23,
-          59,
-          59,
-          999
-        ).getTime()
+      ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999).getTime()
       : null;
 
     return transactions.filter((transaction) => {
       const matchesCategory =
         categoryFilter === FILTER_ALL_VALUE ||
-        (categoryFilter === EMPTY_SELECT_VALUE
-          ? !transaction.category_id
-          : transaction.category_id === categoryFilter);
+        (categoryFilter === EMPTY_SELECT_VALUE ? !transaction.category_id : transaction.category_id === categoryFilter);
       const matchesKind = kindFilter === FILTER_ALL_VALUE || transaction.kind === kindFilter;
-      const matchesAccount =
-        accountFilter === FILTER_ALL_VALUE || transaction.account_id === accountFilter;
+      const matchesAccount = accountFilter === FILTER_ALL_VALUE || transaction.account_id === accountFilter;
       const matchesDateRange = (() => {
         if (!startTime && !endTime) return true;
         const transactionDate = parseFilterDate(transaction.occurred_on);

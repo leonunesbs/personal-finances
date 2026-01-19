@@ -1,23 +1,25 @@
-"use client";
+'use client';
 
-import { copyPreviousMonthBudgetItems, upsertBudgetItems, upsertMonthlyBudget } from "@/app/(app)/budgets/actions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatCurrency, formatCurrencyValue, parseAmount } from "@/lib/finance";
-import { cn } from "@/lib/utils";
-import { useEffect, useMemo, useTransition } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
-import { Pie, PieChart } from "recharts";
+import { useEffect, useMemo, useTransition } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Pie, PieChart } from 'recharts';
+import { useRouter } from 'next/navigation';
+import { z } from 'zod';
 
-import { CurrencyInput } from "@/components/forms/currency-input";
-import { SelectField } from "@/components/forms/select-field";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { z } from "zod";
+import { copyPreviousMonthBudgetItems, upsertBudgetItems, upsertMonthlyBudget } from '@/app/(app)/budgets/actions';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartContainer, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatCurrency, formatCurrencyValue, parseAmount } from '@/lib/finance';
+import { cn } from '@/lib/utils';
+import { CurrencyInput } from '@/components/forms/currency-input';
+import { SelectField } from '@/components/forms/select-field';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+import type { ChartConfig } from '@/components/ui/chart';
 
 type Category = {
   id: string;
@@ -57,35 +59,35 @@ type BudgetsClientProps = {
 };
 
 const budgetFormSchema = z.object({
-  month: z.string().min(1, "Selecione o mês."),
+  month: z.string().min(1, 'Selecione o mês.'),
   income_target: z
     .string()
     .optional()
-    .refine((value) => !value || parseAmount(value) >= 0, "Informe um valor válido."),
+    .refine((value) => !value || parseAmount(value) >= 0, 'Informe um valor válido.'),
   investment_percent: z
     .string()
     .optional()
     .refine((value) => {
       if (!value) return true;
-      const normalized = value.replace(",", ".").replace(/[^0-9.-]/g, "");
+      const normalized = value.replace(',', '.').replace(/[^0-9.-]/g, '');
       const parsed = Number.parseFloat(normalized);
       return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
-    }, "Percentual inválido."),
+    }, 'Percentual inválido.'),
   reserve_percent: z
     .string()
     .optional()
     .refine((value) => {
       if (!value) return true;
-      const normalized = value.replace(",", ".").replace(/[^0-9.-]/g, "");
+      const normalized = value.replace(',', '.').replace(/[^0-9.-]/g, '');
       const parsed = Number.parseFloat(normalized);
       return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
-    }, "Percentual inválido."),
+    }, 'Percentual inválido.'),
   limits: z.record(
     z.string(),
     z
       .string()
       .optional()
-      .refine((value) => !value || parseAmount(value) >= 0, "Informe um valor válido.")
+      .refine((value) => !value || parseAmount(value) >= 0, 'Informe um valor válido.'),
   ),
 });
 
@@ -93,7 +95,7 @@ type BudgetFormValues = z.infer<typeof budgetFormSchema>;
 
 const parsePercent = (value?: string) => {
   if (!value) return 0;
-  const normalized = value.replace(",", ".").replace(/[^0-9.-]/g, "");
+  const normalized = value.replace(',', '.').replace(/[^0-9.-]/g, '');
   const parsed = Number.parseFloat(normalized);
   if (!Number.isFinite(parsed)) return 0;
   return Math.min(Math.max(parsed, 0), 100);
@@ -116,33 +118,33 @@ const normalizePercentPair = (investment: number, reserve: number) => {
 const toInvestmentPercentLabel = (budget: Budget | null) => {
   const incomeTarget = Number(budget?.income_target ?? 0);
   const investmentTarget = Number(budget?.investment_target ?? 0);
-  if (!incomeTarget) return "";
+  if (!incomeTarget) return '';
   const percent = (investmentTarget / incomeTarget) * 100;
-  if (!Number.isFinite(percent) || percent <= 0) return "0";
+  if (!Number.isFinite(percent) || percent <= 0) return '0';
   return percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(2);
 };
 
 const toReservePercentLabel = (budget: Budget | null) => {
   const incomeTarget = Number(budget?.income_target ?? 0);
   const reserveTarget = Number(budget?.reserve_target ?? 0);
-  if (!incomeTarget) return "";
+  if (!incomeTarget) return '';
   const percent = (reserveTarget / incomeTarget) * 100;
-  if (!Number.isFinite(percent) || percent <= 0) return "0";
+  if (!Number.isFinite(percent) || percent <= 0) return '0';
   return percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(2);
 };
 
 const chartConfig = {
   investment: {
-    label: "Investimento",
-    color: "#3b82f6",
+    label: 'Investimento',
+    color: '#3b82f6',
   },
   reserve: {
-    label: "Reserva",
-    color: "#ef4444",
+    label: 'Reserva',
+    color: '#ef4444',
   },
   expense: {
-    label: "Despesa",
-    color: "#22c55e",
+    label: 'Despesa',
+    color: '#22c55e',
   },
 } satisfies ChartConfig;
 
@@ -160,24 +162,15 @@ export function BudgetsClient({
   const [isCopying, startCopyTransition] = useTransition();
   const [isChangingMonth, startMonthTransition] = useTransition();
   const monthValue = month.slice(0, 7);
-  const budgetResolver = useMemo(() => {
-    const baseResolver = zodResolver(budgetFormSchema);
-    return async (...args: Parameters<typeof baseResolver>) => {
-      try {
-        return await baseResolver(...args);
-      } catch (error) {
-        throw error;
-      }
-    };
-  }, []);
+  const budgetResolver = useMemo(() => zodResolver(budgetFormSchema), []);
 
   const budgetForm = useForm<BudgetFormValues>({
     resolver: budgetResolver,
     defaultValues: {
       month: monthValue,
-      income_target: formatCurrencyValue(budget?.income_target ?? ""),
-      investment_percent: toInvestmentPercentLabel(budget) || "20",
-      reserve_percent: toReservePercentLabel(budget) || "5",
+      income_target: formatCurrencyValue(budget?.income_target ?? ''),
+      investment_percent: toInvestmentPercentLabel(budget) || '20',
+      reserve_percent: toReservePercentLabel(budget) || '5',
       limits: {},
     },
   });
@@ -185,7 +178,7 @@ export function BudgetsClient({
   const expenseByCategory = useMemo(() => {
     const totals = new Map<string, number>();
     transactions.forEach((transaction) => {
-      if (transaction.kind !== "expense" || !transaction.category_id) return;
+      if (transaction.kind !== 'expense' || !transaction.category_id) return;
       const current = totals.get(transaction.category_id) ?? 0;
       totals.set(transaction.category_id, current + Number(transaction.amount ?? 0));
     });
@@ -195,83 +188,82 @@ export function BudgetsClient({
   const budgetItemByCategory = useMemo(
     () =>
       new Map(
-        currentItems
-          .filter((item) => Boolean(item.category_id))
-          .map((item) => [item.category_id as string, item])
+        currentItems.filter((item) => Boolean(item.category_id)).map((item) => [item.category_id as string, item]),
       ),
-    [currentItems]
+    [currentItems],
   );
 
-  const incomeTargetValue = useWatch({
-    control: budgetForm.control,
-    name: "income_target",
-  }) ?? "";
-  const investmentPercentValue = useWatch({
-    control: budgetForm.control,
-    name: "investment_percent",
-  }) ?? "";
-  const reservePercentValue = useWatch({
-    control: budgetForm.control,
-    name: "reserve_percent",
-  }) ?? "";
-  const selectedMonth = useWatch({
-    control: budgetForm.control,
-    name: "month",
-  }) ?? "";
+  const incomeTargetValue =
+    useWatch({
+      control: budgetForm.control,
+      name: 'income_target',
+    }) ?? '';
+  const investmentPercentValue =
+    useWatch({
+      control: budgetForm.control,
+      name: 'investment_percent',
+    }) ?? '';
+  const reservePercentValue =
+    useWatch({
+      control: budgetForm.control,
+      name: 'reserve_percent',
+    }) ?? '';
+  const selectedMonth =
+    useWatch({
+      control: budgetForm.control,
+      name: 'month',
+    }) ?? '';
   const limitValues = (useWatch({
     control: budgetForm.control,
-    name: "limits",
+    name: 'limits',
   }) ?? {}) as Record<string, string | undefined>;
   const nearLimitThreshold = 0.8;
 
-  const investmentPercent = useMemo(
-    () => parsePercent(investmentPercentValue),
-    [investmentPercentValue]
-  );
+  const investmentPercent = useMemo(() => parsePercent(investmentPercentValue), [investmentPercentValue]);
   const reservePercent = useMemo(() => parsePercent(reservePercentValue), [reservePercentValue]);
 
   const incomeTargetAmount = useMemo(() => parseAmount(incomeTargetValue), [incomeTargetValue]);
 
   const investmentTargetAmount = useMemo(
     () => incomeTargetAmount * (investmentPercent / 100),
-    [incomeTargetAmount, investmentPercent]
+    [incomeTargetAmount, investmentPercent],
   );
 
   const reserveTargetAmount = useMemo(
     () => incomeTargetAmount * (reservePercent / 100),
-    [incomeTargetAmount, reservePercent]
+    [incomeTargetAmount, reservePercent],
   );
 
   const expenseLimitAmount = useMemo(
     () => Math.max(incomeTargetAmount - investmentTargetAmount - reserveTargetAmount, 0),
-    [incomeTargetAmount, investmentTargetAmount, reserveTargetAmount]
+    [incomeTargetAmount, investmentTargetAmount, reserveTargetAmount],
   );
 
   const categoryTotals = useMemo(() => {
     return categories.reduce(
       (acc, category) => {
-        const limitAmount = parseAmount(limitValues?.[category.id] ?? "");
+        const limitAmount = parseAmount(limitValues?.[category.id] ?? '');
         const spent = expenseByCategory.get(category.id) ?? 0;
         acc.limit += limitAmount;
         acc.spent += spent;
         acc.available += limitAmount - spent;
         return acc;
       },
-      { limit: 0, spent: 0, available: 0 }
+      { limit: 0, spent: 0, available: 0 },
     );
   }, [categories, expenseByCategory, limitValues]);
 
   const getBudgetFormValues = (targetMonth: string) => {
     const nextLimits = categories.reduce<Record<string, string>>((acc, category) => {
       const currentItem = budgetItemByCategory.get(category.id);
-      acc[category.id] = formatCurrencyValue(currentItem?.amount_limit ?? "");
+      acc[category.id] = formatCurrencyValue(currentItem?.amount_limit ?? '');
       return acc;
     }, {});
     return {
       month: targetMonth,
-      income_target: formatCurrencyValue(budget?.income_target ?? ""),
-      investment_percent: toInvestmentPercentLabel(budget) || "20",
-      reserve_percent: toReservePercentLabel(budget) || "5",
+      income_target: formatCurrencyValue(budget?.income_target ?? ''),
+      investment_percent: toInvestmentPercentLabel(budget) || '20',
+      reserve_percent: toReservePercentLabel(budget) || '5',
       limits: nextLimits,
     };
   };
@@ -296,7 +288,7 @@ export function BudgetsClient({
     if (!nextMonth || nextMonth === selectedMonth) {
       return;
     }
-    budgetForm.setValue("month", nextMonth, {
+    budgetForm.setValue('month', nextMonth, {
       shouldDirty: true,
       shouldTouch: true,
       shouldValidate: true,
@@ -311,21 +303,21 @@ export function BudgetsClient({
   const handleSaveBudget = budgetForm.handleSubmit(async (values) => {
     startBudgetTransition(async () => {
       const monthlyData = new FormData();
-      monthlyData.set("month", values.month);
-      monthlyData.set("income_target", values.income_target ?? "");
-      monthlyData.set("investment_percent", values.investment_percent ?? "");
-      monthlyData.set("reserve_percent", values.reserve_percent ?? "");
+      monthlyData.set('month', values.month);
+      monthlyData.set('income_target', values.income_target ?? '');
+      monthlyData.set('investment_percent', values.investment_percent ?? '');
+      monthlyData.set('reserve_percent', values.reserve_percent ?? '');
 
       const itemsData = new FormData();
-      itemsData.set("month", values.month);
+      itemsData.set('month', values.month);
       itemsData.set(
-        "items",
+        'items',
         JSON.stringify(
           categories.map((category) => ({
             category_id: category.id,
-            amount_limit: values.limits?.[category.id] ?? "",
-          }))
-        )
+            amount_limit: values.limits?.[category.id] ?? '',
+          })),
+        ),
       );
 
       await upsertMonthlyBudget(monthlyData);
@@ -337,14 +329,14 @@ export function BudgetsClient({
   const formatMonthLabel = (value: string) => {
     const parsed = new Date(`${value}T00:00:00`);
     if (Number.isNaN(parsed.getTime())) return value;
-    const label = parsed.toLocaleDateString("pt-BR", { month: "long" });
+    const label = parsed.toLocaleDateString('pt-BR', { month: 'long' });
     return label.charAt(0).toUpperCase() + label.slice(1);
   };
 
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 12 }, (_, index) => currentYear + 1 - index);
-  const fallbackMonth = String(new Date().getMonth() + 1).padStart(2, "0");
-  const [resolvedYear, resolvedMonth] = selectedMonth.split("-");
+  const fallbackMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+  const [resolvedYear, resolvedMonth] = selectedMonth.split('-');
   const selectedYearValue = resolvedYear || String(currentYear);
   const selectedMonthValue = resolvedMonth || fallbackMonth;
 
@@ -389,24 +381,22 @@ export function BudgetsClient({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Mês de referência</Label>
-                  {isChangingMonth ? (
-                    <span className="text-xs text-muted-foreground">Carregando...</span>
-                  ) : null}
+                  {isChangingMonth ? <span className="text-xs text-muted-foreground">Carregando...</span> : null}
                 </div>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" aria-busy={isChangingMonth}>
                   {[
-                    { value: "01", label: "JAN" },
-                    { value: "02", label: "FEV" },
-                    { value: "03", label: "MAR" },
-                    { value: "04", label: "ABR" },
-                    { value: "05", label: "MAI" },
-                    { value: "06", label: "JUN" },
-                    { value: "07", label: "JUL" },
-                    { value: "08", label: "AGO" },
-                    { value: "09", label: "SET" },
-                    { value: "10", label: "OUT" },
-                    { value: "11", label: "NOV" },
-                    { value: "12", label: "DEZ" },
+                    { value: '01', label: 'JAN' },
+                    { value: '02', label: 'FEV' },
+                    { value: '03', label: 'MAR' },
+                    { value: '04', label: 'ABR' },
+                    { value: '05', label: 'MAI' },
+                    { value: '06', label: 'JUN' },
+                    { value: '07', label: 'JUL' },
+                    { value: '08', label: 'AGO' },
+                    { value: '09', label: 'SET' },
+                    { value: '10', label: 'OUT' },
+                    { value: '11', label: 'NOV' },
+                    { value: '12', label: 'DEZ' },
                   ].map((monthOption) => {
                     const isChecked = selectedMonthValue === monthOption.value;
                     const nextMonth = `${selectedYearValue}-${monthOption.value}`;
@@ -420,9 +410,9 @@ export function BudgetsClient({
                           disabled={isChangingMonth}
                           onClick={() => handleMonthChange(nextMonth)}
                           className={cn(
-                            "flex w-full items-center justify-center rounded-md border border-input px-3 py-2 text-sm font-medium transition-colors",
-                            isChecked ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground",
-                            isChangingMonth && "cursor-not-allowed opacity-60"
+                            'flex w-full items-center justify-center rounded-md border border-input px-3 py-2 text-sm font-medium transition-colors',
+                            isChecked ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground',
+                            isChangingMonth && 'cursor-not-allowed opacity-60',
                           )}
                         >
                           {monthOption.label}
@@ -443,7 +433,7 @@ export function BudgetsClient({
                     <CurrencyInput
                       id="income_target"
                       name="income_target"
-                      value={field.value ?? ""}
+                      value={field.value ?? ''}
                       onValueChange={field.onChange}
                     />
                   )}
@@ -468,14 +458,38 @@ export function BudgetsClient({
                         onValueChange={(values) => {
                           const nextInvestment = values[0] ?? 0;
                           // #region agent log
-                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'budgets-client.tsx:155',message:'investment slider change',data:{nextInvestment,currentReserve:reservePercent},timestamp:Date.now()})}).catch(()=>{});
+                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              sessionId: 'debug-session',
+                              runId: 'pre-fix',
+                              hypothesisId: 'H1',
+                              location: 'budgets-client.tsx:155',
+                              message: 'investment slider change',
+                              data: { nextInvestment, currentReserve: reservePercent },
+                              timestamp: Date.now(),
+                            }),
+                          }).catch(() => {});
                           // #endregion
                           const normalized = normalizePercentPair(nextInvestment, reservePercent);
                           // #region agent log
-                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'budgets-client.tsx:166',message:'investment normalized',data:{nextInvestment,normalized},timestamp:Date.now()})}).catch(()=>{});
+                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              sessionId: 'debug-session',
+                              runId: 'pre-fix',
+                              hypothesisId: 'H2',
+                              location: 'budgets-client.tsx:166',
+                              message: 'investment normalized',
+                              data: { nextInvestment, normalized },
+                              timestamp: Date.now(),
+                            }),
+                          }).catch(() => {});
                           // #endregion
                           field.onChange(String(normalized.investment));
-                          budgetForm.setValue("reserve_percent", String(normalized.reserve), {
+                          budgetForm.setValue('reserve_percent', String(normalized.reserve), {
                             shouldDirty: true,
                             shouldTouch: true,
                             shouldValidate: true,
@@ -487,9 +501,7 @@ export function BudgetsClient({
                   )}
                 />
                 {budgetForm.formState.errors.investment_percent ? (
-                  <p className="text-sm text-destructive">
-                    {budgetForm.formState.errors.investment_percent.message}
-                  </p>
+                  <p className="text-sm text-destructive">{budgetForm.formState.errors.investment_percent.message}</p>
                 ) : null}
               </div>
               <div className="space-y-2">
@@ -508,14 +520,38 @@ export function BudgetsClient({
                         onValueChange={(values) => {
                           const nextReserve = values[0] ?? 0;
                           // #region agent log
-                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'budgets-client.tsx:195',message:'reserve slider change',data:{nextReserve,currentInvestment:investmentPercent},timestamp:Date.now()})}).catch(()=>{});
+                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              sessionId: 'debug-session',
+                              runId: 'pre-fix',
+                              hypothesisId: 'H1',
+                              location: 'budgets-client.tsx:195',
+                              message: 'reserve slider change',
+                              data: { nextReserve, currentInvestment: investmentPercent },
+                              timestamp: Date.now(),
+                            }),
+                          }).catch(() => {});
                           // #endregion
                           const normalized = normalizePercentPair(investmentPercent, nextReserve);
                           // #region agent log
-                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'budgets-client.tsx:206',message:'reserve normalized',data:{nextReserve,normalized},timestamp:Date.now()})}).catch(()=>{});
+                          fetch('http://127.0.0.1:7244/ingest/698d3491-aa0e-49e5-8a5c-20be2b2c07f5', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              sessionId: 'debug-session',
+                              runId: 'pre-fix',
+                              hypothesisId: 'H2',
+                              location: 'budgets-client.tsx:206',
+                              message: 'reserve normalized',
+                              data: { nextReserve, normalized },
+                              timestamp: Date.now(),
+                            }),
+                          }).catch(() => {});
                           // #endregion
                           field.onChange(String(normalized.reserve));
-                          budgetForm.setValue("investment_percent", String(normalized.investment), {
+                          budgetForm.setValue('investment_percent', String(normalized.investment), {
                             shouldDirty: true,
                             shouldTouch: true,
                             shouldValidate: true,
@@ -527,9 +563,7 @@ export function BudgetsClient({
                   )}
                 />
                 {budgetForm.formState.errors.reserve_percent ? (
-                  <p className="text-sm text-destructive">
-                    {budgetForm.formState.errors.reserve_percent.message}
-                  </p>
+                  <p className="text-sm text-destructive">{budgetForm.formState.errors.reserve_percent.message}</p>
                 ) : null}
               </div>
             </div>
@@ -538,19 +572,19 @@ export function BudgetsClient({
                 <div className="rounded-lg border bg-muted/30 p-4">
                   <p className="text-xs text-muted-foreground">Meta de investimento (valor)</p>
                   <p className="mt-2 text-lg font-semibold text-blue-600">
-                    {formatCurrency(investmentTargetAmount, "BRL")}
+                    {formatCurrency(investmentTargetAmount, 'BRL')}
                   </p>
                 </div>
                 <div className="rounded-lg border bg-muted/30 p-4">
                   <p className="text-xs text-muted-foreground">Reserva crítica (valor)</p>
                   <p className="mt-2 text-lg font-semibold text-red-600">
-                    {formatCurrency(reserveTargetAmount, "BRL")}
+                    {formatCurrency(reserveTargetAmount, 'BRL')}
                   </p>
                 </div>
                 <div className="rounded-lg border bg-muted/30 p-4">
                   <p className="text-xs text-muted-foreground">Limite de despesa</p>
                   <p className="mt-2 text-lg font-semibold text-emerald-600">
-                    {formatCurrency(expenseLimitAmount, "BRL")}
+                    {formatCurrency(expenseLimitAmount, 'BRL')}
                   </p>
                 </div>
               </div>
@@ -560,19 +594,19 @@ export function BudgetsClient({
                     <Pie
                       data={[
                         {
-                          label: "Investimento",
+                          label: 'Investimento',
                           value: investmentTargetAmount,
-                          fill: "var(--color-investment)",
+                          fill: 'var(--color-investment)',
                         },
                         {
-                          label: "Reserva",
+                          label: 'Reserva',
                           value: reserveTargetAmount,
-                          fill: "var(--color-reserve)",
+                          fill: 'var(--color-reserve)',
                         },
                         {
-                          label: "Despesa",
+                          label: 'Despesa',
                           value: expenseLimitAmount,
-                          fill: "var(--color-expense)",
+                          fill: 'var(--color-expense)',
                         },
                       ]}
                       dataKey="value"
@@ -602,18 +636,19 @@ export function BudgetsClient({
                   {categories.length > 0 ? (
                     categories.map((category) => {
                       const spent = expenseByCategory.get(category.id) ?? 0;
-                      const limitValue = limitValues?.[category.id] ?? "";
+                      const limitValue = limitValues?.[category.id] ?? '';
                       const limitAmount = parseAmount(limitValue);
                       const available = limitAmount - spent;
                       const hasLimit = limitAmount > 0;
                       const spentRatio = hasLimit ? spent / limitAmount : 0;
                       const rowClassName = cn(
-                        hasLimit && spent > limitAmount && "bg-destructive/10",
-                        hasLimit && spent <= limitAmount && spentRatio >= nearLimitThreshold && "bg-amber-500/10",
-                        hasLimit && spentRatio < nearLimitThreshold && "bg-emerald-500/10"
+                        hasLimit && spent > limitAmount && 'bg-destructive/10',
+                        hasLimit && spent <= limitAmount && spentRatio >= nearLimitThreshold && 'bg-amber-500/10',
+                        hasLimit && spentRatio < nearLimitThreshold && 'bg-emerald-500/10',
                       );
-                      const limitErrors =
-                        budgetForm.formState.errors.limits as Record<string, { message?: string }> | undefined;
+                      const limitErrors = budgetForm.formState.errors.limits as
+                        | Record<string, { message?: string }>
+                        | undefined;
                       const limitError = limitErrors?.[category.id]?.message;
                       const limitFieldName = `limits.${category.id}` as `limits.${string}`;
 
@@ -629,30 +664,34 @@ export function BudgetsClient({
                                   <CurrencyInput
                                     id={`limit-${category.id}`}
                                     name={limitFieldName}
-                                    value={typeof field.value === "string" ? field.value : ""}
+                                    value={typeof field.value === 'string' ? field.value : ''}
                                     onValueChange={field.onChange}
                                   />
                                 )}
                               />
-                              {limitError ? (
-                                <p className="text-xs text-destructive">{limitError}</p>
-                              ) : null}
+                              {limitError ? <p className="text-xs text-destructive">{limitError}</p> : null}
                             </div>
                           </TableCell>
                           <TableCell
                             className={cn(
-                              hasLimit && spent > limitAmount && "font-semibold text-destructive",
-                              hasLimit && spent <= limitAmount && spentRatio >= nearLimitThreshold && "font-semibold text-amber-600",
-                              hasLimit && spentRatio < nearLimitThreshold && "font-semibold text-emerald-600"
+                              hasLimit && spent > limitAmount && 'font-semibold text-destructive',
+                              hasLimit &&
+                                spent <= limitAmount &&
+                                spentRatio >= nearLimitThreshold &&
+                                'font-semibold text-amber-600',
+                              hasLimit && spentRatio < nearLimitThreshold && 'font-semibold text-emerald-600',
                             )}
                           >
                             {formatCurrency(spent)}
                           </TableCell>
                           <TableCell
                             className={cn(
-                              hasLimit && spent > limitAmount && "font-semibold text-destructive",
-                              hasLimit && spent <= limitAmount && spentRatio >= nearLimitThreshold && "font-semibold text-amber-600",
-                              hasLimit && spentRatio < nearLimitThreshold && "font-semibold text-emerald-600"
+                              hasLimit && spent > limitAmount && 'font-semibold text-destructive',
+                              hasLimit &&
+                                spent <= limitAmount &&
+                                spentRatio >= nearLimitThreshold &&
+                                'font-semibold text-amber-600',
+                              hasLimit && spentRatio < nearLimitThreshold && 'font-semibold text-emerald-600',
                             )}
                           >
                             {formatCurrency(available)}
@@ -680,7 +719,7 @@ export function BudgetsClient({
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={isSavingBudget || budgetForm.formState.isSubmitting}>
-                {isSavingBudget ? "Salvando..." : "Salvar orçamento"}
+                {isSavingBudget ? 'Salvando...' : 'Salvar orçamento'}
               </Button>
               <Button
                 type="button"
@@ -704,7 +743,7 @@ export function BudgetsClient({
                   });
                 }}
               >
-                {isCopying ? "Copiando..." : "Copiar mês anterior"}
+                {isCopying ? 'Copiando...' : 'Copiar mês anterior'}
               </Button>
             </div>
           </form>

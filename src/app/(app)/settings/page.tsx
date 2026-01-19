@@ -1,32 +1,32 @@
-import { getBinInfo } from "@/lib/bin-info";
-import { requireUser } from "@/lib/supabase/auth";
+import { getBinInfo } from '@/lib/bin-info';
+import { requireUser } from '@/lib/supabase/auth';
 
-import { SettingsClient } from "./settings-client";
+import { SettingsClient } from './settings-client';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser();
 
   const [accounts, categories, cards, tags, transactions] = await Promise.all([
-    supabase.from("accounts").select("*").order("created_at"),
-    supabase.from("categories").select("*").order("created_at"),
-    supabase.from("cards").select("*").order("created_at"),
-    supabase.from("tags").select("*").order("created_at"),
+    supabase.from('accounts').select('*').order('created_at'),
+    supabase.from('categories').select('*').order('created_at'),
+    supabase.from('cards').select('*').order('created_at'),
+    supabase.from('tags').select('*').order('created_at'),
     supabase
-      .from("transactions")
-      .select("id, card_id, amount, kind, occurred_on, account_id, to_account_id")
-      .order("occurred_on", {
-      ascending: false,
-    }),
+      .from('transactions')
+      .select('id, card_id, amount, kind, occurred_on, account_id, to_account_id')
+      .order('occurred_on', {
+        ascending: false,
+      }),
   ]);
 
   const cardRows = cards.data ?? [];
   const cardsNeedingBin = cardRows.filter(
-    (card) => card.first6 && !card.bin_card_type && !card.bin_issuer && !card.bin_country
+    (card) => card.first6 && !card.bin_card_type && !card.bin_issuer && !card.bin_country,
   );
   const missingBins = Array.from(
-    new Set(cardsNeedingBin.map((card) => card.first6).filter((value): value is string => Boolean(value)))
+    new Set(cardsNeedingBin.map((card) => card.first6).filter((value): value is string => Boolean(value))),
   );
   const binInfoEntries =
     missingBins.length > 0
@@ -39,15 +39,15 @@ export default async function SettingsPage() {
       binInfoEntries.map(async ([bin, info]) => {
         if (!info) return;
         await supabase
-          .from("cards")
+          .from('cards')
           .update({
             bin_card_type: info.cardType,
             bin_issuer: info.issuer,
             bin_country: info.country,
           })
-          .eq("user_id", user.id)
-          .eq("first6", bin);
-      })
+          .eq('user_id', user.id)
+          .eq('first6', bin);
+      }),
     );
   }
 

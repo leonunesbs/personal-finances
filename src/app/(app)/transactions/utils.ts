@@ -1,10 +1,6 @@
-import { format, isValid, parseISO } from "date-fns";
+import { format, isValid, parseISO } from 'date-fns';
 
-export const normalizeImportDescription = (value: string) =>
-  value
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
+export const normalizeImportDescription = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
 
 export const parsePositiveInt = (value?: string) => {
   if (!value) return null;
@@ -18,8 +14,8 @@ export const parseInstallmentRatio = (description?: string | null) => {
   if (!description) return null;
   const match = installmentRatioRegex.exec(description);
   if (!match) return null;
-  const installmentNumber = Number.parseInt(match[1] ?? "", 10);
-  const totalInstallments = Number.parseInt(match[2] ?? "", 10);
+  const installmentNumber = Number.parseInt(match[1] ?? '', 10);
+  const totalInstallments = Number.parseInt(match[2] ?? '', 10);
   if (!installmentNumber || !totalInstallments || installmentNumber > totalInstallments) {
     return null;
   }
@@ -39,5 +35,5 @@ export const parseRowsJson = (value: string) => {
 export const formatShortDate = (value?: string | null) => {
   if (!value) return null;
   const parsed = parseISO(value);
-  return isValid(parsed) ? format(parsed, "dd/MM/yyyy") : value;
+  return isValid(parsed) ? format(parsed, 'dd/MM/yyyy') : value;
 };

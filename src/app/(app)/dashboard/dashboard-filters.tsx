@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import * as React from "react";
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import * as React from 'react';
 
 type DashboardFiltersProps = {
   selectedYear: number;
@@ -20,24 +20,24 @@ export function DashboardFilters({ selectedYear, selectedMonth, yearOptions, mon
     (next: { month?: number; year?: number }) => {
       const params = new URLSearchParams(searchParams.toString());
       if (next.month) {
-        params.set("month", next.month.toString());
+        params.set('month', next.month.toString());
       }
       if (next.year) {
-        params.set("year", next.year.toString());
+        params.set('year', next.year.toString());
       }
       router.push(`${pathname}?${params.toString()}`);
     },
-    [pathname, router, searchParams]
+    [pathname, router, searchParams],
   );
 
   const getMonthHref = React.useCallback(
     (month: number) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set("month", month.toString());
-      params.set("year", selectedYear.toString());
+      params.set('month', month.toString());
+      params.set('year', selectedYear.toString());
       return `${pathname}?${params.toString()}`;
     },
-    [pathname, searchParams, selectedYear]
+    [pathname, searchParams, selectedYear],
   );
 
   return (
@@ -70,9 +70,7 @@ export function DashboardFilters({ selectedYear, selectedMonth, yearOptions, mon
                 key={month.value}
                 href={getMonthHref(month.value)}
                 className={`flex h-8 min-w-[44px] items-center justify-center rounded-md px-2 text-xs font-medium transition-colors ${
-                  isActive
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/70"
+                  isActive ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/70'
                 }`}
               >
                 {month.label}

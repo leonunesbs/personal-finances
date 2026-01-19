@@ -1,28 +1,27 @@
-"use client"
+'use client';
 
-import * as React from "react"
+import * as React from 'react';
+import { isValid, parseISO } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { ptBR } from 'date-fns/locale';
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { isValid, parseISO } from "date-fns"
-
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { ptBR } from "date-fns/locale"
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 type DatePickerFieldProps = {
-  id: string
-  name: string
-  defaultValue?: string
-  value?: string
-  onChange?: (value: string) => void
-  onBlur?: React.FocusEventHandler<HTMLButtonElement>
-  required?: boolean
-  disabled?: boolean
-  placeholder?: string
-  className?: string
-}
+  id: string;
+  name: string;
+  defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+  onBlur?: React.FocusEventHandler<HTMLButtonElement>;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+};
 
 export function DatePickerField({
   id,
@@ -33,41 +32,37 @@ export function DatePickerField({
   onBlur,
   required,
   disabled,
-  placeholder = "Selecione a data",
+  placeholder = 'Selecione a data',
   className,
 }: DatePickerFieldProps) {
-  const timeZone = "America/Sao_Paulo"
+  const timeZone = 'America/Sao_Paulo';
   const parseDateValue = React.useCallback((input?: string) => {
-    if (!input) return undefined
-    const parsed = parseISO(input)
-    return isValid(parsed) ? parsed : undefined
-  }, [])
+    if (!input) return undefined;
+    const parsed = parseISO(input);
+    return isValid(parsed) ? parsed : undefined;
+  }, []);
   const [date, setDate] = React.useState<Date | undefined>(() => {
-    return parseDateValue(value ?? defaultValue)
-  })
+    return parseDateValue(value ?? defaultValue);
+  });
 
   React.useEffect(() => {
-    if (value === undefined) return
-    setDate(parseDateValue(value))
-  }, [parseDateValue, value])
+    if (value === undefined) return;
+    setDate(parseDateValue(value));
+  }, [parseDateValue, value]);
 
   const fieldValue = date
-    ? new Intl.DateTimeFormat("en-CA", {
+    ? new Intl.DateTimeFormat('en-CA', {
         timeZone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
       }).format(date)
-    : ""
-  const inputValue = value ?? fieldValue
-  const displayValue = date
-    ? new Intl.DateTimeFormat("pt-BR", { timeZone, dateStyle: "long" }).format(
-        date
-      )
-    : null
+    : '';
+  const inputValue = value ?? fieldValue;
+  const displayValue = date ? new Intl.DateTimeFormat('pt-BR', { timeZone, dateStyle: 'long' }).format(date) : null;
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -88,19 +83,19 @@ export function DatePickerField({
             mode="single"
             selected={date}
             onSelect={(selected) => {
-              setDate(selected)
-              if (!onChange) return
+              setDate(selected);
+              if (!onChange) return;
               if (!selected) {
-                onChange("")
-                return
+                onChange('');
+                return;
               }
-              const formatted = new Intl.DateTimeFormat("en-CA", {
+              const formatted = new Intl.DateTimeFormat('en-CA', {
                 timeZone,
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              }).format(selected)
-              onChange(formatted)
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+              }).format(selected);
+              onChange(formatted);
             }}
             captionLayout="dropdown"
             locale={ptBR}
@@ -118,5 +113,5 @@ export function DatePickerField({
         required={required}
       />
     </div>
-  )
+  );
 }

@@ -1,9 +1,10 @@
-"use client";
+'use client';
 
-import { Controller } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Controller } from 'react-hook-form';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Sheet,
   SheetContent,
@@ -12,13 +13,15 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SelectField } from "@/components/forms/select-field";
-import { formatCurrency } from "@/lib/finance";
-import { useImportTransactions } from "./use-import-transactions";
-import type { Account, Category, CardItem } from "../../types";
+} from '@/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SelectField } from '@/components/forms/select-field';
+import { formatCurrency } from '@/lib/finance';
+
+import { useImportTransactions } from './use-import-transactions';
+
+import type { Account, Category, CardItem } from '../../types';
 
 type TransactionImportSheetProps = {
   accounts: Account[];
@@ -65,7 +68,7 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
     | string
     | undefined;
 
-  const csvFileField = form.register("csv_file", {
+  const csvFileField = form.register('csv_file', {
     onChange: handleImportFileChange,
   });
 
@@ -91,12 +94,7 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
           <form className="flex min-h-0 flex-1 flex-col gap-6 pr-1" onSubmit={handleImportSubmit}>
             <div className="space-y-2">
               <Label htmlFor="csv_file">Arquivo CSV da fatura</Label>
-              <Input
-                id="csv_file"
-                type="file"
-                accept=".csv,text/csv"
-                {...csvFileField}
-              />
+              <Input id="csv_file" type="file" accept=".csv,text/csv" {...csvFileField} />
               {importCsvMessage && !isParsingFile && rows.length === 0 && (
                 <p className="text-xs text-destructive">{importCsvMessage}</p>
               )}
@@ -115,11 +113,11 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
                     name="account_id"
                     label="Conta"
                     options={accountOptions}
-                    value={field.value ?? ""}
+                    value={field.value ?? ''}
                     onValueChange={(nextAccountId) => {
                       field.onChange(nextAccountId);
-                      if (accountTypeMap.get(nextAccountId) !== "credit") {
-                        form.setValue("card_id", "", { shouldValidate: true });
+                      if (accountTypeMap.get(nextAccountId) !== 'credit') {
+                        form.setValue('card_id', '', { shouldValidate: true });
                       }
                     }}
                   />
@@ -133,20 +131,16 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
                     name="card_id"
                     label="Cartão"
                     options={importCardOptions}
-                    placeholder={importIsCreditAccount ? "Obrigatório" : "Selecione a conta"}
-                    value={field.value ?? ""}
+                    placeholder={importIsCreditAccount ? 'Obrigatório' : 'Selecione a conta'}
+                    value={field.value ?? ''}
                     disabled={!importAccountId || !importIsCreditAccount}
                     onValueChange={field.onChange}
                   />
                 )}
               />
-              {importAccountMessage && (
-                <p className="text-xs text-destructive md:col-span-2">{importAccountMessage}</p>
-              )}
+              {importAccountMessage && <p className="text-xs text-destructive md:col-span-2">{importAccountMessage}</p>}
               {importIsCreditAccount && importAccountId && importCardOptions.length === 0 && (
-                <p className="text-xs text-destructive md:col-span-2">
-                  Nenhum cartão disponível para importar.
-                </p>
+                <p className="text-xs text-destructive md:col-span-2">Nenhum cartão disponível para importar.</p>
               )}
             </div>
             {importRowsMessage && <p className="text-xs text-destructive">{importRowsMessage}</p>}
@@ -156,12 +150,11 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <div>
                     <p className="font-medium">Prévia das linhas</p>
-                    <p className="text-xs text-muted-foreground">
-                      {rows.length} linhas encontradas
-                    </p>
+                    <p className="text-xs text-muted-foreground">{rows.length} linhas encontradas</p>
                     {isSuggestingActive && suggestingProgress.total > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        IA categorizando {suggestingProgress.completed} de {suggestingProgress.total} ({suggestProgressPercent}
+                        IA categorizando {suggestingProgress.completed} de {suggestingProgress.total} (
+                        {suggestProgressPercent}
                         %)
                       </p>
                     )}
@@ -169,8 +162,14 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
                       <p className="text-xs text-muted-foreground">IA categorizando...</p>
                     )}
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={handleRefreshCategories} disabled={isSuggestingActive}>
-                    {isSuggestingActive ? "Atualizando..." : "Renovar IA"}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefreshCategories}
+                    disabled={isSuggestingActive}
+                  >
+                    {isSuggestingActive ? 'Atualizando...' : 'Renovar IA'}
                   </Button>
                 </div>
                 <div className="min-h-[240px] overflow-y-auto rounded-lg border">
@@ -190,7 +189,7 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
                           <TableCell>{row.title}</TableCell>
                           <TableCell>
                             <Select
-                              value={row.categoryId ?? ""}
+                              value={row.categoryId ?? ''}
                               onValueChange={(value) => handleRowCategoryChange(row.id, value)}
                             >
                               <SelectTrigger className="min-w-[180px]">
@@ -205,9 +204,7 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="text-right whitespace-nowrap">
-                            {formatCurrency(row.amount)}
-                          </TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.amount)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -241,15 +238,9 @@ export function TransactionImportSheet(props: TransactionImportSheetProps) {
             <SheetFooter className="mt-auto">
               <Button
                 type="submit"
-                disabled={
-                  isImporting ||
-                  !fileName ||
-                  !importAccountId ||
-                  !importCardId ||
-                  rows.length === 0
-                }
+                disabled={isImporting || !fileName || !importAccountId || !importCardId || rows.length === 0}
               >
-                {isImporting ? "Importando..." : "Importar transações"}
+                {isImporting ? 'Importando...' : 'Importar transações'}
               </Button>
             </SheetFooter>
           </form>

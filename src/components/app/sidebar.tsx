@@ -1,13 +1,13 @@
-import Link from "next/link";
+import Link from 'next/link';
 
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/transactions", label: "Transações" },
-  { href: "/budgets", label: "Orçamentos" },
-  { href: "/settings", label: "Configurações" },
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/transactions', label: 'Transações' },
+  { href: '/budgets', label: 'Orçamentos' },
+  { href: '/settings', label: 'Configurações' },
 ];
 
 export function Sidebar() {

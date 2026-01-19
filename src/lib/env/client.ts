@@ -1,6 +1,6 @@
-import { z } from "zod/v4";
+import { z } from 'zod/v4';
 
-import { createEnv } from "@t3-oss/env-nextjs";
+import { createEnv } from '@t3-oss/env-nextjs';
 
 export const clientEnv = createEnv({
   /**

@@ -1,25 +1,25 @@
 export function parseAmount(value: FormDataEntryValue | null) {
-  if (typeof value !== "string") return 0;
+  if (typeof value !== 'string') return 0;
   const trimmed = value.trim();
   if (!trimmed) return 0;
-  const sanitized = trimmed.replace(/[^\d,.-]/g, "");
+  const sanitized = trimmed.replace(/[^\d,.-]/g, '');
   if (!sanitized) return 0;
-  const hasComma = sanitized.includes(",");
-  const hasDot = sanitized.includes(".");
+  const hasComma = sanitized.includes(',');
+  const hasDot = sanitized.includes('.');
   let normalized = sanitized;
 
   if (hasComma && hasDot) {
-    normalized = sanitized.replace(/\./g, "").replace(",", ".");
+    normalized = sanitized.replace(/\./g, '').replace(',', '.');
   } else if (hasComma) {
-    normalized = sanitized.replace(",", ".");
+    normalized = sanitized.replace(',', '.');
   } else if (hasDot) {
-    const parts = sanitized.split(".");
+    const parts = sanitized.split('.');
     if (parts.length > 2) {
-      normalized = `${parts.slice(0, -1).join("")}.${parts[parts.length - 1]}`;
+      normalized = `${parts.slice(0, -1).join('')}.${parts[parts.length - 1]}`;
     }
   }
 
-  normalized = normalized.replace(/(?!^)-/g, "");
+  normalized = normalized.replace(/(?!^)-/g, '');
   const parsed = Number.parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -30,22 +30,22 @@ function withCurrencyPrefix(formatted: string, prefix: string) {
   return `${trimmedPrefix} ${formatted}`;
 }
 
-export function formatCurrencyInput(value: string, prefix: string = "R$") {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
+export function formatCurrencyInput(value: string, prefix: string = 'R$') {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
   const amount = Number.parseInt(digits, 10) / 100;
-  const formatted = new Intl.NumberFormat("pt-BR", {
+  const formatted = new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
   return withCurrencyPrefix(formatted, prefix);
 }
 
-export function formatCurrencyValue(value: number | string | null | undefined, prefix: string = "R$") {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) return "";
-    const formatted = new Intl.NumberFormat("pt-BR", {
+export function formatCurrencyValue(value: number | string | null | undefined, prefix: string = 'R$') {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '';
+    const formatted = new Intl.NumberFormat('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -56,13 +56,13 @@ export function formatCurrencyValue(value: number | string | null | undefined, p
 }
 
 export function parseIntValue(value: FormDataEntryValue | null) {
-  if (typeof value !== "string") return 0;
+  if (typeof value !== 'string') return 0;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function parseDate(value: FormDataEntryValue | null) {
-  if (typeof value !== "string" || value.trim() === "") {
+  if (typeof value !== 'string' || value.trim() === '') {
     return new Date();
   }
   return new Date(`${value}T00:00:00`);
@@ -72,18 +72,18 @@ export function toDateString(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-export type CurrencyCode = "BRL" | "USD" | "EUR";
+export type CurrencyCode = 'BRL' | 'USD' | 'EUR';
 
 const currencyPrefixMap: Record<CurrencyCode, string> = {
-  BRL: "R$",
-  USD: "US$",
-  EUR: "€",
+  BRL: 'R$',
+  USD: 'US$',
+  EUR: '€',
 };
 
-export function formatCurrency(amount: number | null | undefined, currency: CurrencyCode = "BRL") {
+export function formatCurrency(amount: number | null | undefined, currency: CurrencyCode = 'BRL') {
   const normalized = Number(amount ?? 0);
   const safeAmount = Number.isFinite(normalized) ? normalized : 0;
-  const formatted = new Intl.NumberFormat("pt-BR", {
+  const formatted = new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(safeAmount);

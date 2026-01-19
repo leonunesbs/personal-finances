@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useId, useState } from "react";
+import { useId, useState } from 'react';
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 type CheckboxFieldProps = {
   name: string;
@@ -30,7 +30,7 @@ export function CheckboxField({
 
   return (
     <div className="flex items-center gap-2">
-      <input type="hidden" name={name} value={currentChecked ? "true" : "false"} />
+      <input type="hidden" name={name} value={currentChecked ? 'true' : 'false'} />
       <Checkbox
         id={id}
         checked={currentChecked}

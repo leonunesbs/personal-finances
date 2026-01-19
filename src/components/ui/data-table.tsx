@@ -1,29 +1,20 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
+
 import {
-  type ColumnDef,
-  type ColumnFiltersState,
-  type Row,
-  type Table as TableInstance,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   useReactTable,
-} from "@tanstack/react-table";
+} from '@tanstack/react-table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import type { ColumnDef, ColumnFiltersState, Row, Table as TableInstance } from '@tanstack/react-table';
 
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
@@ -42,12 +33,12 @@ type DataTableProps<TData, TValue> = {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  emptyMessage = "Nenhum resultado.",
+  emptyMessage = 'Nenhum resultado.',
   enablePagination = false,
   initialPageSize = 10,
   pageSizeOptions = [10, 20, 50],
   searchColumnId,
-  searchPlaceholder = "Buscar...",
+  searchPlaceholder = 'Buscar...',
   renderSelectedActions,
   getRowId,
   onSelectionChange,
@@ -98,14 +89,14 @@ export function DataTable<TData, TValue>({
             {isSearchEnabled && (
               <Input
                 placeholder={searchPlaceholder}
-                value={(searchColumn?.getFilterValue() as string) ?? ""}
+                value={(searchColumn?.getFilterValue() as string) ?? ''}
                 onChange={(event) => searchColumn?.setFilterValue(event.target.value)}
                 className="h-8 w-full sm:max-w-[240px]"
               />
             )}
             {selectedCount > 0 && (
               <span className="text-xs text-muted-foreground">
-                {selectedCount} selecionada{selectedCount > 1 ? "s" : ""}
+                {selectedCount} selecionada{selectedCount > 1 ? 's' : ''}
               </span>
             )}
           </div>
@@ -138,9 +129,7 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id} className="whitespace-nowrap">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -149,7 +138,7 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="whitespace-nowrap">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

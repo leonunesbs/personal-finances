@@ -1,13 +1,13 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // Enums
-export const accountTypeEnum = z.enum(["checking", "savings", "credit", "investment"]);
+export const accountTypeEnum = z.enum(['checking', 'savings', 'credit', 'investment']);
 export const transactionKindEnum = z.enum([
-  "income",
-  "expense",
-  "transfer",
-  "investment_contribution",
-  "investment_withdrawal",
+  'income',
+  'expense',
+  'transfer',
+  'investment_contribution',
+  'investment_withdrawal',
 ]);
 
 // Zod schemas
@@ -37,7 +37,10 @@ export const transactionSchema = z.object({
   id: z.string().uuid(),
   description: z.string().nullable(),
   amount: z.number(),
-  occurred_on: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)), // ISO date or date string
+  occurred_on: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)), // ISO date or date string
   kind: z.string(), // Could be transactionKindEnum if backend validates
   account_id: z.string().uuid().nullable(),
   to_account_id: z.string().uuid().nullable(),
@@ -56,7 +59,10 @@ export const transactionInstallmentSchema = z.object({
   transaction_id: z.string().uuid(),
   installment_number: z.number().int().positive(),
   total_installments: z.number().int().positive(),
-  due_on: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)), // ISO date or date string
+  due_on: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)), // ISO date or date string
 });
 
 export const transactionsClientPropsSchema = z.object({

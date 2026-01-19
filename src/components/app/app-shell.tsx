@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
+import { Separator } from '@/components/ui/separator';
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { Separator } from "@/components/ui/separator";
+import type { ReactNode } from 'react';
 
 type AppShellProps = {
   children: ReactNode;

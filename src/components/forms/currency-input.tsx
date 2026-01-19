@@ -1,12 +1,16 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, ComponentProps } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import { Input } from "@/components/ui/input";
-import { formatCurrencyInput, formatCurrencyValue } from "@/lib/finance";
+import { Input } from '@/components/ui/input';
+import { formatCurrencyInput, formatCurrencyValue } from '@/lib/finance';
 
-type CurrencyInputProps = Omit<ComponentProps<typeof Input>, "type" | "inputMode" | "onChange" | "value" | "defaultValue"> & {
+import type { ChangeEvent, ComponentProps } from 'react';
+
+type CurrencyInputProps = Omit<
+  ComponentProps<typeof Input>,
+  'type' | 'inputMode' | 'onChange' | 'value' | 'defaultValue'
+> & {
   defaultValue?: number | string;
   value?: string;
   currencyPrefix?: string;
@@ -14,16 +18,22 @@ type CurrencyInputProps = Omit<ComponentProps<typeof Input>, "type" | "inputMode
   onValueChange?: (value: string) => void;
 };
 
-export function CurrencyInput({ defaultValue, value, currencyPrefix = "R$", onChange, onValueChange, ...props }: CurrencyInputProps) {
-  const initialValue = useMemo(
-    () => formatCurrencyValue(defaultValue, currencyPrefix),
-    [defaultValue, currencyPrefix],
-  );
+export function CurrencyInput({
+  defaultValue,
+  value,
+  currencyPrefix = 'R$',
+  onChange,
+  onValueChange,
+  ...props
+}: CurrencyInputProps) {
+  const initialValue = useMemo(() => formatCurrencyValue(defaultValue, currencyPrefix), [defaultValue, currencyPrefix]);
   const [internalValue, setInternalValue] = useState(initialValue);
   const displayValue = value ?? internalValue;
 
+  // Sync internal state when initialValue changes (uncontrolled mode)
   useEffect(() => {
     if (value === undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInternalValue(initialValue);
     }
   }, [initialValue, value]);

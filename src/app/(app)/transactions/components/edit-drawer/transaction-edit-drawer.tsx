@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
-import { Controller } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Controller } from 'react-hook-form';
+
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Drawer,
   DrawerClose,
@@ -11,7 +12,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
+} from '@/components/ui/drawer';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,16 +22,18 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CurrencyInput } from "@/components/forms/currency-input";
-import { DatePickerField } from "@/components/forms/date-picker-field";
-import { cn } from "@/lib/utils";
-import { EMPTY_SELECT_VALUE, transactionKindOptions } from "../../constants";
-import { useEditTransaction } from "./use-edit-transaction";
-import type { Account, Category, CardItem, Transaction } from "../../types";
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CurrencyInput } from '@/components/forms/currency-input';
+import { DatePickerField } from '@/components/forms/date-picker-field';
+import { cn } from '@/lib/utils';
+
+import { EMPTY_SELECT_VALUE, transactionKindOptions } from '../../constants';
+import { useEditTransaction } from './use-edit-transaction';
+
+import type { Account, Category, CardItem, Transaction } from '../../types';
 
 type TransactionEditDrawerProps = {
   accounts: Account[];
@@ -78,17 +81,11 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isSaving}
-              onClick={() => handleConfirmEditInstallments(false)}
-            >
+            <AlertDialogCancel disabled={isSaving} onClick={() => handleConfirmEditInstallments(false)}>
               Apenas esta
             </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isSaving}
-              onClick={() => handleConfirmEditInstallments(true)}
-            >
-              {isSaving ? "Salvando..." : "Lançar futuras"}
+            <AlertDialogAction disabled={isSaving} onClick={() => handleConfirmEditInstallments(true)}>
+              {isSaving ? 'Salvando...' : 'Lançar futuras'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -97,14 +94,12 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
         <DrawerContent className="flex max-h-[90vh] flex-col">
           <DrawerHeader className="text-left">
             <DrawerTitle>Editar transação</DrawerTitle>
-            <DrawerDescription>
-              Atualize data, valores e classificação antes de salvar.
-            </DrawerDescription>
+            <DrawerDescription>Atualize data, valores e classificação antes de salvar.</DrawerDescription>
           </DrawerHeader>
-          <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleEditSubmit(editingTransactionId ?? "")}>
+          <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleEditSubmit(editingTransactionId ?? '')}>
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
               <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-                {editingTransaction?.description ?? "Transação sem descrição"}
+                {editingTransaction?.description ?? 'Transação sem descrição'}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -118,7 +113,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                         name="occurred_on"
                         value={field.value}
                         onChange={field.onChange}
-                        className={cn(editErrors.occurred_on && "border-destructive")}
+                        className={cn(editErrors.occurred_on && 'border-destructive')}
                       />
                     )}
                   />
@@ -130,10 +125,10 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                   <Label htmlFor="edit-description">Descrição</Label>
                   <Input
                     id="edit-description"
-                    {...editForm.register("description")}
+                    {...editForm.register('description')}
                     placeholder="Descrição"
                     disabled={isSaving}
-                    className={cn(editErrors.description && "border-destructive")}
+                    className={cn(editErrors.description && 'border-destructive')}
                   />
                   {editErrors.description && (
                     <p className="text-xs text-destructive">{editErrors.description.message}</p>
@@ -146,7 +141,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                     name="kind"
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange} disabled={isSaving}>
-                        <SelectTrigger className={cn(editErrors.kind && "border-destructive")}>
+                        <SelectTrigger className={cn(editErrors.kind && 'border-destructive')}>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -168,7 +163,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                     name="account_id"
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange} disabled={isSaving}>
-                        <SelectTrigger className={cn(editErrors.account_id && "border-destructive")}>
+                        <SelectTrigger className={cn(editErrors.account_id && 'border-destructive')}>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -181,9 +176,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                       </Select>
                     )}
                   />
-                  {editErrors.account_id && (
-                    <p className="text-xs text-destructive">{editErrors.account_id.message}</p>
-                  )}
+                  {editErrors.account_id && <p className="text-xs text-destructive">{editErrors.account_id.message}</p>}
                 </div>
                 {isEditTransfer && (
                   <div className="space-y-2">
@@ -193,7 +186,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                       name="to_account_id"
                       render={({ field }) => (
                         <Select value={field.value} onValueChange={field.onChange} disabled={isSaving}>
-                          <SelectTrigger className={cn(editErrors.to_account_id && "border-destructive")}>
+                          <SelectTrigger className={cn(editErrors.to_account_id && 'border-destructive')}>
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
@@ -245,7 +238,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                       name="card_id"
                       render={({ field }) => (
                         <Select value={field.value} onValueChange={field.onChange} disabled={isSaving}>
-                          <SelectTrigger className={cn(editErrors.card_id && "border-destructive")}>
+                          <SelectTrigger className={cn(editErrors.card_id && 'border-destructive')}>
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
@@ -258,9 +251,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                         </Select>
                       )}
                     />
-                    {editErrors.card_id && (
-                      <p className="text-xs text-destructive">{editErrors.card_id.message}</p>
-                    )}
+                    {editErrors.card_id && <p className="text-xs text-destructive">{editErrors.card_id.message}</p>}
                     {editIsCreditAccountSelected && editCardOptions.length === 0 && (
                       <p className="text-xs text-destructive">Nenhum cartão vinculado à conta selecionada.</p>
                     )}
@@ -274,10 +265,10 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                     render={({ field }) => (
                       <Select
                         value={field.value || EMPTY_SELECT_VALUE}
-                        onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)}
+                        onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? '' : value)}
                         disabled={isSaving}
                       >
-                        <SelectTrigger className={cn(editErrors.category_id && "border-destructive")}>
+                        <SelectTrigger className={cn(editErrors.category_id && 'border-destructive')}>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="max-h-56 overflow-y-auto">
@@ -304,7 +295,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                       <CurrencyInput
                         value={field.value}
                         onValueChange={field.onChange}
-                        className={cn(editErrors.amount && "border-destructive")}
+                        className={cn(editErrors.amount && 'border-destructive')}
                         disabled={isSaving}
                       />
                     )}
@@ -316,9 +307,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                 <>
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Detalhes do Parcelamento</p>
-                    <p className="text-xs text-muted-foreground">
-                      Informações sobre as parcelas desta transação.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Informações sobre as parcelas desta transação.</p>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -328,9 +317,9 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                         type="number"
                         min={1}
                         placeholder="Ex: 2"
-                        {...editForm.register("installment_number")}
+                        {...editForm.register('installment_number')}
                         disabled={isSaving}
-                        className={cn(editErrors.installment_number && "border-destructive")}
+                        className={cn(editErrors.installment_number && 'border-destructive')}
                       />
                       {editErrors.installment_number && (
                         <p className="text-xs text-destructive">{editErrors.installment_number.message}</p>
@@ -343,9 +332,9 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
                         type="number"
                         min={1}
                         placeholder="Ex: 6"
-                        {...editForm.register("total_installments")}
+                        {...editForm.register('total_installments')}
                         disabled={isSaving}
-                        className={cn(editErrors.total_installments && "border-destructive")}
+                        className={cn(editErrors.total_installments && 'border-destructive')}
                       />
                       {editErrors.total_installments && (
                         <p className="text-xs text-destructive">{editErrors.total_installments.message}</p>
@@ -357,7 +346,7 @@ export function TransactionEditDrawer(props: TransactionEditDrawerProps) {
             </div>
             <DrawerFooter className="border-t">
               <Button type="submit" disabled={isSaving || !editingTransactionId}>
-                {isSaving ? "Salvando..." : "Salvar alterações"}
+                {isSaving ? 'Salvando...' : 'Salvar alterações'}
               </Button>
               <DrawerClose asChild>
                 <Button type="button" variant="outline" disabled={isSaving}>

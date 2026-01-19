@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { ArrowUpCircle, BarChart, LayoutDashboard, LogOut, Settings } from "lucide-react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import * as React from 'react';
+import { ArrowUpCircle, BarChart, LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 import {
   Sidebar,
@@ -16,26 +16,26 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { createClient } from "@/lib/supabase/client"
+} from '@/components/ui/sidebar';
+import { createClient } from '@/lib/supabase/client';
 
 const menuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Transações", url: "/transactions", icon: ArrowUpCircle },
-  { title: "Orçamentos", url: "/budgets", icon: BarChart },
-  { title: "Configurações", url: "/settings", icon: Settings },
-]
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Transações', url: '/transactions', icon: ArrowUpCircle },
+  { title: 'Orçamentos', url: '/budgets', icon: BarChart },
+  { title: 'Configurações', url: '/settings', icon: Settings },
+];
 
 export function AppSidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
+  const pathname = usePathname();
+  const router = useRouter();
 
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/sign-in")
-    router.refresh()
-  }
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/sign-in');
+    router.refresh();
+  };
 
   return (
     <Sidebar>
@@ -56,8 +56,8 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.url || pathname?.startsWith(`${item.url}/`)
+                const Icon = item.icon;
+                const isActive = pathname === item.url || pathname?.startsWith(`${item.url}/`);
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive}>
@@ -67,7 +67,7 @@ export function AppSidebar() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -84,5 +84,5 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

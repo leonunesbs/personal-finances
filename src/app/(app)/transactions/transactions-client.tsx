@@ -1,15 +1,18 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TransactionImportSheet } from "./components/import-sheet/transaction-import-sheet";
-import { TransactionEditDrawer } from "./components/edit-drawer/transaction-edit-drawer";
-import { TransactionCreateForm } from "./components/create-form/transaction-create-form";
-import { TransactionFilters } from "./components/filters/transaction-filters";
-import { TransactionTable } from "./components/table/transaction-table";
-import { useTransactionFilters } from "./components/filters/use-transaction-filters";
-import { useEditTransaction } from "./components/edit-drawer/use-edit-transaction";
-import type { TransactionsClientProps } from "./types";
+import { useMemo } from 'react';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+import { TransactionImportSheet } from './components/import-sheet/transaction-import-sheet';
+import { TransactionEditDrawer } from './components/edit-drawer/transaction-edit-drawer';
+import { TransactionCreateForm } from './components/create-form/transaction-create-form';
+import { TransactionFilters } from './components/filters/transaction-filters';
+import { TransactionTable } from './components/table/transaction-table';
+import { useTransactionFilters } from './components/filters/use-transaction-filters';
+import { useEditTransaction } from './components/edit-drawer/use-edit-transaction';
+
+import type { TransactionsClientProps } from './types';
 
 export function TransactionsClient(props: TransactionsClientProps) {
   const { accounts, categories, cards, tags, transactions, transactionInstallments } = props;
@@ -56,12 +59,7 @@ export function TransactionsClient(props: TransactionsClientProps) {
       />
 
       <div className="space-y-6">
-        <TransactionCreateForm
-          accounts={accounts}
-          categories={categories}
-          cards={cards}
-          tags={tags}
-        />
+        <TransactionCreateForm accounts={accounts} categories={categories} cards={cards} tags={tags} />
 
         <Card>
           <CardHeader className="space-y-1">

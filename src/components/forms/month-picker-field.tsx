@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 type MonthPickerFieldProps = {
   id: string;
@@ -19,19 +19,19 @@ type MonthPickerFieldProps = {
 };
 
 function parseMonthValue(value?: string) {
-  if (!value) return { month: "", year: "" };
-  const [year, month] = value.split("-");
-  if (!year || !month) return { month: "", year: "" };
+  if (!value) return { month: '', year: '' };
+  const [year, month] = value.split('-');
+  if (!year || !month) return { month: '', year: '' };
   return { month, year };
 }
 
 function buildMonthValue(month: string, year: string) {
-  if (!month || !year) return "";
+  if (!month || !year) return '';
   const monthNumber = Number.parseInt(month, 10);
   const yearNumber = Number.parseInt(year, 10);
-  if (!Number.isFinite(monthNumber) || !Number.isFinite(yearNumber)) return "";
-  if (monthNumber < 1 || monthNumber > 12) return "";
-  return `${yearNumber}-${String(monthNumber).padStart(2, "0")}`;
+  if (!Number.isFinite(monthNumber) || !Number.isFinite(yearNumber)) return '';
+  if (monthNumber < 1 || monthNumber > 12) return '';
+  return `${yearNumber}-${String(monthNumber).padStart(2, '0')}`;
 }
 
 export function MonthPickerField({
@@ -65,7 +65,7 @@ export function MonthPickerField({
   }, [fieldValue, onChange, onValueChange]);
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       <div className="grid grid-cols-2 gap-2">
         <Input
           id={`${id}-month`}

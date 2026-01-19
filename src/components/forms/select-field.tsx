@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useId, useState } from "react";
+import { useId, useState } from 'react';
 
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type SelectOption = {
   value: string;
@@ -36,7 +36,7 @@ export function SelectField({
   onValueChange,
 }: SelectFieldProps) {
   const id = useId();
-  const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+  const [internalValue, setInternalValue] = useState(defaultValue ?? '');
   const currentValue = value ?? internalValue;
 
   const handleValueChange = (nextValue: string) => {
@@ -53,7 +53,7 @@ export function SelectField({
       <input type="hidden" name={name} value={currentValue} />
       <Select value={currentValue} onValueChange={handleValueChange} disabled={disabled}>
         <SelectTrigger id={id} disabled={disabled} onBlur={onBlur}>
-          <SelectValue placeholder={placeholder ?? "Selecione"} />
+          <SelectValue placeholder={placeholder ?? 'Selecione'} />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (

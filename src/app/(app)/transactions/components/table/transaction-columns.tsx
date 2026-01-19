@@ -1,13 +1,17 @@
-"use client";
+'use client';
 
-import { type ColumnDef } from "@tanstack/react-table";
-import { format, parseISO } from "date-fns";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/finance";
-import { transactionKindOptions } from "../../constants";
-import { parseInstallmentRatio, formatShortDate } from "../../utils";
-import type { Account, Category, CardItem, Transaction, TransactionInstallment } from "../../types";
+import { format, parseISO } from 'date-fns';
+
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/finance';
+
+import { transactionKindOptions } from '../../constants';
+import { parseInstallmentRatio, formatShortDate } from '../../utils';
+
+import type { ColumnDef } from '@tanstack/react-table';
+
+import type { Transaction } from '../../types';
 
 type CreateColumnsProps = {
   accountMap: Map<string, string>;
@@ -26,7 +30,7 @@ export function createTransactionColumns({
 
   return [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => {
         const allRows = table.getRowModel().rows;
         const allSelected = allRows.length > 0 && allRows.every((row) => row.getIsSelected());
@@ -34,7 +38,7 @@ export function createTransactionColumns({
         return (
           <div className="flex items-center justify-center">
             <Checkbox
-              checked={allSelected || (someSelected && "indeterminate")}
+              checked={allSelected || (someSelected && 'indeterminate')}
               onCheckedChange={(value) => {
                 allRows.forEach((row) => row.toggleSelected(!!value));
               }}
@@ -60,46 +64,46 @@ export function createTransactionColumns({
       enableHiding: false,
     },
     {
-      accessorKey: "occurred_on",
-      header: "Data",
+      accessorKey: 'occurred_on',
+      header: 'Data',
       cell: ({ row }) => {
         const rawDate = row.original.occurred_on;
-        if (!rawDate) return "-";
+        if (!rawDate) return '-';
         const parsed = parseISO(rawDate);
-        return Number.isNaN(parsed.getTime()) ? rawDate : format(parsed, "dd/MM/yyyy");
+        return Number.isNaN(parsed.getTime()) ? rawDate : format(parsed, 'dd/MM/yyyy');
       },
     },
     {
-      accessorKey: "description",
-      header: "Descrição",
-      cell: ({ row }) => row.original.description ?? "-",
+      accessorKey: 'description',
+      header: 'Descrição',
+      cell: ({ row }) => row.original.description ?? '-',
     },
     {
-      accessorKey: "kind",
-      header: "Tipo",
+      accessorKey: 'kind',
+      header: 'Tipo',
       cell: ({ row }) => transactionKindMap.get(row.original.kind) ?? row.original.kind,
     },
     {
-      id: "status",
-      header: "Status",
+      id: 'status',
+      header: 'Status',
       cell: ({ row }) => {
         const transactionDate = new Date(row.original.occurred_on);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        return transactionDate < today ? "Efetivada" : "Futura";
+        return transactionDate < today ? 'Efetivada' : 'Futura';
       },
     },
     {
-      id: "bill_payment",
-      header: "Fatura",
-      cell: ({ row }) => (row.original.is_bill_payment ? "Pagamento" : "-"),
+      id: 'bill_payment',
+      header: 'Fatura',
+      cell: ({ row }) => (row.original.is_bill_payment ? 'Pagamento' : '-'),
     },
     {
-      id: "installment_payment",
-      header: "Parcela",
+      id: 'installment_payment',
+      header: 'Parcela',
       cell: ({ row }) => {
         if (!row.original.is_installment_payment) {
-          return "-";
+          return '-';
         }
         const installmentMeta = installmentMetaByTransaction.get(row.original.id);
         const ratio = parseInstallmentRatio(row.original.description);
@@ -109,32 +113,32 @@ export function createTransactionColumns({
           totalInstallments ? `${totalInstallments}x` : null,
           firstDueOn ? `1ª em ${firstDueOn}` : null,
         ].filter(Boolean);
-        return details.length > 0 ? `Parcela · ${details.join(" · ")}` : "Parcela";
+        return details.length > 0 ? `Parcela · ${details.join(' · ')}` : 'Parcela';
       },
     },
     {
-      id: "recurring_payment",
-      header: "Recorrente",
-      cell: ({ row }) => (row.original.is_recurring_payment ? "Assinatura" : "-"),
+      id: 'recurring_payment',
+      header: 'Recorrente',
+      cell: ({ row }) => (row.original.is_recurring_payment ? 'Assinatura' : '-'),
     },
     {
-      id: "account",
-      header: "Conta",
-      cell: ({ row }) => (row.original.account_id ? accountMap.get(row.original.account_id) : "-"),
+      id: 'account',
+      header: 'Conta',
+      cell: ({ row }) => (row.original.account_id ? accountMap.get(row.original.account_id) : '-'),
     },
     {
-      id: "category",
-      header: "Categoria",
-      cell: ({ row }) => (row.original.category_id ? categoryMap.get(row.original.category_id) : "-"),
+      id: 'category',
+      header: 'Categoria',
+      cell: ({ row }) => (row.original.category_id ? categoryMap.get(row.original.category_id) : '-'),
     },
     {
-      accessorKey: "amount",
-      header: "Valor",
+      accessorKey: 'amount',
+      header: 'Valor',
       cell: ({ row }) => formatCurrency(row.original.amount),
     },
     {
-      id: "actions",
-      header: "",
+      id: 'actions',
+      header: '',
       cell: ({ row }) => {
         return (
           <Button variant="ghost" size="sm" onClick={() => onEditStart(row.original)}>

@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import type { FocusEventHandler } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
+import type { FocusEventHandler } from 'react';
 
 type MonthYearFieldProps = {
   id: string;
@@ -21,22 +22,22 @@ type MonthYearFieldProps = {
 
 function parseMonthYear(value?: string) {
   if (!value) {
-    return { month: "", year: "" };
+    return { month: '', year: '' };
   }
-  const [year, month] = value.split("-");
+  const [year, month] = value.split('-');
   if (!year || !month) {
-    return { month: "", year: "" };
+    return { month: '', year: '' };
   }
   return { month, year };
 }
 
 function buildMonthYearValue(month: string, year: string) {
-  if (!month || !year) return "";
+  if (!month || !year) return '';
   const monthNumber = Number.parseInt(month, 10);
   const yearNumber = Number.parseInt(year, 10);
-  if (!Number.isFinite(monthNumber) || !Number.isFinite(yearNumber)) return "";
-  if (monthNumber < 1 || monthNumber > 12) return "";
-  return `${yearNumber}-${String(monthNumber).padStart(2, "0")}-01`;
+  if (!Number.isFinite(monthNumber) || !Number.isFinite(yearNumber)) return '';
+  if (monthNumber < 1 || monthNumber > 12) return '';
+  return `${yearNumber}-${String(monthNumber).padStart(2, '0')}-01`;
 }
 
 export function MonthYearField({
@@ -55,10 +56,13 @@ export function MonthYearField({
   const [month, setMonth] = useState(parsed.month);
   const [year, setYear] = useState(parsed.year);
 
+  // Sync state when value prop changes (controlled mode)
   useEffect(() => {
     if (value === undefined) return;
     const next = parseMonthYear(value);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMonth(next.month);
+
     setYear(next.year);
   }, [value]);
 
@@ -71,7 +75,7 @@ export function MonthYearField({
   }, [hiddenValue, onChange, onValueChange]);
 
   return (
-    <div className={cn("grid gap-2", className)}>
+    <div className={cn('grid gap-2', className)}>
       <div className="grid grid-cols-2 gap-2">
         <Input
           id={`${id}-month`}
@@ -102,14 +106,7 @@ export function MonthYearField({
           disabled={disabled}
         />
       </div>
-      <input
-        id={id}
-        name={name}
-        type="hidden"
-        value={inputValue}
-        readOnly
-        required={required}
-      />
+      <input id={id} name={name} type="hidden" value={inputValue} readOnly required={required} />
     </div>
   );
 }

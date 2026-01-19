@@ -1,14 +1,14 @@
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
 export default async function Home() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
 
   if (data.user) {
-    redirect("/dashboard");
+    redirect('/dashboard');
   }
 
-  redirect("/sign-in");
+  redirect('/sign-in');
 }

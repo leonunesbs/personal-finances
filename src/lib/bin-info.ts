@@ -1,4 +1,4 @@
-import { cache } from "react";
+import { cache } from 'react';
 
 export type BinInfo = {
   cardType: string | null;
@@ -6,7 +6,7 @@ export type BinInfo = {
   country: string | null;
 };
 
-const normalizeText = (value: string) => value.replace(/\s+/g, " ").trim().toLowerCase();
+const normalizeText = (value: string) => value.replace(/\s+/g, ' ').trim().toLowerCase();
 
 const extractValue = (lines: string[], label: string) => {
   const normalizedLabel = normalizeText(label);
@@ -28,17 +28,17 @@ export const getBinInfo = cache(async (first6: string): Promise<BinInfo | null> 
 
     const html = await response.text();
     const sanitized = html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, "\n");
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, '\n');
     const lines = sanitized
-      .split("\n")
+      .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
 
-    const cardType = extractValue(lines, "Tipo de cartão");
-    const issuer = extractValue(lines, "Emissor / Nome do Banco");
-    const country = extractValue(lines, "Nome do país");
+    const cardType = extractValue(lines, 'Tipo de cartão');
+    const issuer = extractValue(lines, 'Emissor / Nome do Banco');
+    const country = extractValue(lines, 'Nome do país');
 
     if (!cardType && !issuer && !country) return null;
 

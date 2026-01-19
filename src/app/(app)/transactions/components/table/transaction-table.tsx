@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { DataTable } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
+import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+
+import { DataTable } from '@/components/ui/data-table';
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,10 +16,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { deleteTransactions } from "../../actions";
-import { createTransactionColumns } from "./transaction-columns";
-import type { Account, Category, CardItem, Transaction, TransactionInstallment } from "../../types";
+} from '@/components/ui/alert-dialog';
+
+import { deleteTransactions } from '../../actions';
+import { createTransactionColumns } from './transaction-columns';
+
+import type { Account, Category, CardItem, Transaction, TransactionInstallment } from '../../types';
 
 type TransactionTableProps = {
   transactions: Transaction[];
@@ -30,21 +33,15 @@ type TransactionTableProps = {
 };
 
 export function TransactionTable(props: TransactionTableProps) {
-  const { transactions, transactionInstallments, accounts, categories, cards, onEditStart } = props;
+  const { transactions, transactionInstallments, accounts, categories, onEditStart } = props;
   const [selectedTransactions, setSelectedTransactions] = useState<Transaction[]>([]);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, startDeleting] = useTransition();
   const router = useRouter();
 
-  const accountMap = useMemo(
-    () => new Map(accounts.map((account) => [account.id, account.name])),
-    [accounts]
-  );
+  const accountMap = useMemo(() => new Map(accounts.map((account) => [account.id, account.name])), [accounts]);
 
-  const categoryMap = useMemo(
-    () => new Map(categories.map((category) => [category.id, category.name])),
-    [categories]
-  );
+  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
 
   const installmentMetaByTransaction = useMemo(() => {
     const meta = new Map<string, { totalInstallments?: number; firstDueOn?: string }>();
@@ -74,33 +71,29 @@ export function TransactionTable(props: TransactionTableProps) {
         installmentMetaByTransaction,
         onEditStart,
       }),
-    [accountMap, categoryMap, installmentMetaByTransaction, onEditStart]
+    [accountMap, categoryMap, installmentMetaByTransaction, onEditStart],
   );
 
   const selectedTransactionIds = useMemo(
     () => selectedTransactions.map((transaction) => transaction.id),
-    [selectedTransactions]
+    [selectedTransactions],
   );
 
   const totalSelectedCount = selectedTransactionIds.length;
 
   const selectedSummaryLabel = useMemo(() => {
     if (selectedTransactionIds.length === 0) {
-      return "0 transações";
+      return '0 transações';
     }
-    return `${selectedTransactionIds.length} transa${selectedTransactionIds.length > 1 ? "ções" : "ção"}`;
+    return `${selectedTransactionIds.length} transa${selectedTransactionIds.length > 1 ? 'ções' : 'ção'}`;
   }, [selectedTransactionIds.length]);
 
   const hasFutureLinkedSelected = useMemo(
     () =>
       selectedTransactions.some((transaction) =>
-        transactions.some(
-          (t) =>
-            t.parent_transaction_id === transaction.id &&
-            new Date(t.occurred_on) > new Date()
-        )
+        transactions.some((t) => t.parent_transaction_id === transaction.id && new Date(t.occurred_on) > new Date()),
       ),
-    [selectedTransactions, transactions]
+    [selectedTransactions, transactions],
   );
 
   const handleSelectionChange = (rows: Transaction[]) => {
@@ -112,14 +105,14 @@ export function TransactionTable(props: TransactionTableProps) {
     startDeleting(async () => {
       const result = await deleteTransactions(selectedTransactionIds, { deleteFuture });
       if (!result?.ok) {
-        toast.error(result?.message ?? "Erro ao excluir transações.");
+        toast.error(result?.message ?? 'Erro ao excluir transações.');
         return;
       }
       if ('warning' in result && result.warning) {
         toast(String(result.warning));
       }
       toast.success(
-        `${selectedTransactionIds.length} transa${selectedTransactionIds.length > 1 ? "ções" : "ção"} excluída${selectedTransactionIds.length > 1 ? "s" : ""}.`
+        `${selectedTransactionIds.length} transa${selectedTransactionIds.length > 1 ? 'ções' : 'ção'} excluída${selectedTransactionIds.length > 1 ? 's' : ''}.`,
       );
       setIsDeleteOpen(false);
       setSelectedTransactions([]);
@@ -140,11 +133,7 @@ export function TransactionTable(props: TransactionTableProps) {
       renderSelectedActions={() => (
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <AlertDialogTrigger asChild>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={totalSelectedCount === 0 || isDeleting}
-            >
+            <Button variant="destructive" size="sm" disabled={totalSelectedCount === 0 || isDeleting}>
               Excluir selecionadas
             </Button>
           </AlertDialogTrigger>
@@ -153,7 +142,7 @@ export function TransactionTable(props: TransactionTableProps) {
               <AlertDialogTitle>Excluir itens selecionados?</AlertDialogTitle>
               <AlertDialogDescription>
                 Você está prestes a excluir {selectedSummaryLabel}. Esta ação não pode ser desfeita.
-                {hasFutureLinkedSelected ? " Existem lançamentos futuros relacionados." : ""}
+                {hasFutureLinkedSelected ? ' Existem lançamentos futuros relacionados.' : ''}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -164,13 +153,13 @@ export function TransactionTable(props: TransactionTableProps) {
                     onClick={() => handleDeleteSelected(false)}
                     disabled={totalSelectedCount === 0 || isDeleting}
                   >
-                    {isDeleting ? "Excluindo..." : "Excluir e manter futuros"}
+                    {isDeleting ? 'Excluindo...' : 'Excluir e manter futuros'}
                   </AlertDialogAction>
                   <AlertDialogAction
                     onClick={() => handleDeleteSelected(true)}
                     disabled={totalSelectedCount === 0 || isDeleting}
                   >
-                    {isDeleting ? "Excluindo..." : "Excluir também futuros"}
+                    {isDeleting ? 'Excluindo...' : 'Excluir também futuros'}
                   </AlertDialogAction>
                 </>
               ) : (
@@ -178,7 +167,7 @@ export function TransactionTable(props: TransactionTableProps) {
                   onClick={() => handleDeleteSelected(false)}
                   disabled={totalSelectedCount === 0 || isDeleting}
                 >
-                  {isDeleting ? "Excluindo..." : "Excluir"}
+                  {isDeleting ? 'Excluindo...' : 'Excluir'}
                 </AlertDialogAction>
               )}
             </AlertDialogFooter>

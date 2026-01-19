@@ -1,10 +1,12 @@
-"use client";
+'use client';
 
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePickerField } from "@/components/forms/date-picker-field";
-import { EMPTY_SELECT_VALUE, FILTER_ALL_VALUE, transactionKindOptions } from "../../constants";
-import type { Account, Category } from "../../types";
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePickerField } from '@/components/forms/date-picker-field';
+
+import { EMPTY_SELECT_VALUE, FILTER_ALL_VALUE, transactionKindOptions } from '../../constants';
+
+import type { Account, Category } from '../../types';
 
 type TransactionFiltersProps = {
   categoryFilter: string;

@@ -1,4 +1,4 @@
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import { SignOutButton } from '@/components/auth/sign-out-button';
 
 export function Topbar() {
   return (
