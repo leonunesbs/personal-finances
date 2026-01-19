@@ -263,11 +263,33 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const reserveTarget = Number(budget?.reserve_target ?? 0);
 
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const remainingDays = Math.max(daysInMonth - now.getDate() + 1, 1);
+  const currentDay = now.getDate();
+  const remainingDays = Math.max(daysInMonth - currentDay + 1, 1);
   
-  // Calculate daily allowance based on budget: (Income target - Expenses already made - Investment target) / remaining days
-  const budgetRemaining = incomeTarget - totals.expense - investmentTarget;
-  const dailyAllowance = remainingDays > 0 ? Math.max(budgetRemaining / remainingDays, 0) : 0;
+  // Determine if we're viewing current, past, or future month
+  const today = new Date();
+  const isCurrentMonth = now.getMonth() === today.getMonth() && now.getFullYear() === today.getFullYear();
+  const isPastMonth = now < new Date(today.getFullYear(), today.getMonth(), 1);
+  const isFutureMonth = now > new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
+  // Calculate daily allowance based on month type
+  let dailyAllowance = 0;
+  let dailyAllowanceLabel = 'Limite diário disponível';
+  
+  if (isPastMonth) {
+    // Past month: show average daily spending
+    dailyAllowance = daysInMonth > 0 ? totals.expense / daysInMonth : 0;
+    dailyAllowanceLabel = 'Média diária de gastos';
+  } else if (isCurrentMonth) {
+    // Current month: (expense limit - expenses already made) / remaining days
+    const remaining = Math.max(expenseLimit - totals.expense, 0);
+    dailyAllowance = remainingDays > 0 ? remaining / remainingDays : 0;
+    dailyAllowanceLabel = 'Limite diário disponível';
+  } else if (isFutureMonth) {
+    // Future month: expense limit / total days in month
+    dailyAllowance = daysInMonth > 0 ? expenseLimit / daysInMonth : 0;
+    dailyAllowanceLabel = 'Limite diário planejado';
+  }
   
   const saved = totals.income - totals.expense - totals.investmentContribution;
 
@@ -472,10 +494,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <CardTitle className="text-emerald-600">{formatCurrency(totals.investmentContribution, 'BRL')}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className={dailyAllowance > 0 ? 'border-emerald-200/60 bg-emerald-50/40' : 'border-rose-200/60 bg-rose-50/40'}>
+        <Card
+          className={
+            isPastMonth
+              ? 'border-blue-200/60 bg-blue-50/40'
+              : dailyAllowance > 0
+                ? 'border-emerald-200/60 bg-emerald-50/40'
+                : 'border-rose-200/60 bg-rose-50/40'
+          }
+        >
           <CardHeader>
-            <CardDescription>Limite diário disponível</CardDescription>
-            <CardTitle className={dailyAllowance > 0 ? 'text-emerald-600' : 'text-rose-600'}>
+            <CardDescription>{dailyAllowanceLabel}</CardDescription>
+            <CardTitle
+              className={
+                isPastMonth ? 'text-blue-600' : dailyAllowance > 0 ? 'text-emerald-600' : 'text-rose-600'
+              }
+            >
               {formatCurrency(dailyAllowance, 'BRL')}
             </CardTitle>
           </CardHeader>
