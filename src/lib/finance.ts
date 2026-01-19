@@ -24,27 +24,35 @@ export function parseAmount(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function formatCurrencyInput(value: string) {
+function withCurrencyPrefix(formatted: string, prefix: string) {
+  const trimmedPrefix = prefix.trim();
+  if (!trimmedPrefix) return formatted;
+  return `${trimmedPrefix} ${formatted}`;
+}
+
+export function formatCurrencyInput(value: string, prefix: string = "R$") {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
   const amount = Number.parseInt(digits, 10) / 100;
-  return new Intl.NumberFormat("pt-BR", {
+  const formatted = new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+  return withCurrencyPrefix(formatted, prefix);
 }
 
-export function formatCurrencyValue(value: number | string | null | undefined) {
+export function formatCurrencyValue(value: number | string | null | undefined, prefix: string = "R$") {
   if (value === null || value === undefined) return "";
   if (typeof value === "number") {
     if (!Number.isFinite(value)) return "";
-    return new Intl.NumberFormat("pt-BR", {
+    const formatted = new Intl.NumberFormat("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
+    return withCurrencyPrefix(formatted, prefix);
   }
 
-  return formatCurrencyInput(value);
+  return formatCurrencyInput(value, prefix);
 }
 
 export function parseIntValue(value: FormDataEntryValue | null) {
