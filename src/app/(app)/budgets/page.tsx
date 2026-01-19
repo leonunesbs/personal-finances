@@ -5,10 +5,27 @@ import { BudgetsClient } from "./budgets-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function BudgetsPage() {
+type BudgetsPageProps = {
+  searchParams?: {
+    month?: string;
+  };
+};
+
+function resolveMonth(value?: string) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return new Date();
+  }
+  const parsed = new Date(`${value}-01T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date();
+  }
+  return parsed;
+}
+
+export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
   const { supabase, user } = await requireUser();
-  const now = new Date();
-  const { startLabel, endLabel } = getMonthRange(now);
+  const monthDate = resolveMonth(searchParams?.month);
+  const { startLabel, endLabel } = getMonthRange(monthDate);
 
   const [categories, budget, budgetItems, transactions] = await Promise.all([
     supabase.from("categories").select("*").order("created_at"),

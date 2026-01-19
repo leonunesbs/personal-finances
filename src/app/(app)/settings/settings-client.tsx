@@ -1,15 +1,18 @@
 "use client";
 
+import { type ColumnDef } from "@tanstack/react-table";
+
 import { createAccount, createCard, createCardPayment, createCategory, createTag } from "@/app/(app)/settings/actions";
 import { CurrencyInput } from "@/components/forms/currency-input";
+import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SelectField } from "@/components/forms/select-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatCurrency, getStatementDueDate, getStatementWindow, toDateString } from "@/lib/finance";
+import { formatCurrency, getStatementDueDate, getStatementWindow, toDateString, type CurrencyCode } from "@/lib/finance";
 
 type Account = {
   id: string;
@@ -45,6 +48,8 @@ type Transaction = {
   amount: number;
   kind: string;
   occurred_on: string;
+  account_id: string | null;
+  to_account_id: string | null;
 };
 
 type SettingsClientProps = {
@@ -69,13 +74,53 @@ const currencyOptions = [
   { value: "EUR", label: "EUR" },
 ];
 
-export function SettingsClient({ accounts, categories, cards, tags, transactions }: SettingsClientProps) {
+export function SettingsClient({
+  accounts,
+  categories,
+  cards,
+  tags,
+  transactions,
+}: SettingsClientProps) {
   const accountMap = new Map(accounts.map((account) => [account.id, account.name]));
   const cardOptions = cards.map((card) => ({ value: card.id, label: card.name }));
   const cashAccountOptions = accounts
     .filter((account) => account.type !== "credit")
     .map((account) => ({ value: account.id, label: account.name }));
   const todayLabel = toDateString(new Date());
+  const currentBalanceByAccount = new Map<string, number>();
+
+  accounts.forEach((account) => {
+    currentBalanceByAccount.set(account.id, Number(account.initial_balance ?? 0));
+  });
+
+  transactions.forEach((transaction) => {
+    const amount = Number(transaction.amount ?? 0);
+    if (!Number.isFinite(amount) || amount === 0) return;
+
+    if (transaction.kind === "transfer") {
+      if (transaction.account_id) {
+        const current = currentBalanceByAccount.get(transaction.account_id) ?? 0;
+        currentBalanceByAccount.set(transaction.account_id, current - amount);
+      }
+      if (transaction.to_account_id) {
+        const current = currentBalanceByAccount.get(transaction.to_account_id) ?? 0;
+        currentBalanceByAccount.set(transaction.to_account_id, current + amount);
+      }
+      return;
+    }
+
+    if (!transaction.account_id) return;
+
+    const current = currentBalanceByAccount.get(transaction.account_id) ?? 0;
+    if (transaction.kind === "income" || transaction.kind === "investment_withdrawal") {
+      currentBalanceByAccount.set(transaction.account_id, current + amount);
+      return;
+    }
+
+    if (transaction.kind === "expense" || transaction.kind === "investment_contribution") {
+      currentBalanceByAccount.set(transaction.account_id, current - amount);
+    }
+  });
   const statementByCard = new Map(
     cards.map((card) => {
       const now = new Date();
@@ -93,6 +138,111 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
       return [card.id, { total, dueDate, window }];
     })
   );
+
+  const accountColumns: ColumnDef<Account>[] = [
+    {
+      accessorKey: "name",
+      header: "Nome",
+      cell: ({ row }) => row.original.name,
+    },
+    {
+      accessorKey: "type",
+      header: "Tipo",
+      cell: ({ row }) => row.original.type,
+    },
+    {
+      accessorKey: "currency",
+      header: "Moeda",
+      cell: ({ row }) => row.original.currency,
+    },
+    {
+      id: "balance",
+      header: "Saldo atual",
+      cell: ({ row }) =>
+        formatCurrency(
+          currentBalanceByAccount.get(row.original.id) ??
+            row.original.initial_balance,
+          row.original.currency as CurrencyCode
+        ),
+    },
+  ];
+
+  const categoryColumns: ColumnDef<Category>[] = [
+    {
+      accessorKey: "name",
+      header: "Nome",
+      cell: ({ row }) => row.original.name,
+    },
+  ];
+
+  const cardColumns: ColumnDef<CardItem>[] = [
+    {
+      accessorKey: "name",
+      header: "Nome",
+      cell: ({ row }) => row.original.name,
+    },
+    {
+      id: "account",
+      header: "Conta",
+      cell: ({ row }) =>
+        row.original.account_id ? accountMap.get(row.original.account_id) : "-",
+    },
+    {
+      accessorKey: "closing_day",
+      header: "Fechamento",
+      cell: ({ row }) => row.original.closing_day,
+    },
+    {
+      accessorKey: "due_day",
+      header: "Vencimento",
+      cell: ({ row }) => row.original.due_day,
+    },
+    {
+      accessorKey: "limit_amount",
+      header: "Limite",
+      cell: ({ row }) => formatCurrency(row.original.limit_amount),
+    },
+    {
+      id: "statement",
+      header: "Fatura atual",
+      cell: ({ row }) => {
+        const statement = statementByCard.get(row.original.id);
+        const total = statement?.total ?? 0;
+        return (
+          <>
+            {formatCurrency(total)}
+            {statement && (
+              <span className="block text-xs text-muted-foreground">
+                {statement.window.startLabel} → {statement.window.endLabel} • Vence em{" "}
+                {toDateString(statement.dueDate)}
+              </span>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      id: "usage",
+      header: "Uso do limite",
+      cell: ({ row }) => {
+        const statement = statementByCard.get(row.original.id);
+        const total = statement?.total ?? 0;
+        const usage =
+          row.original.limit_amount > 0
+            ? (total / row.original.limit_amount) * 100
+            : 0;
+        return `${usage.toFixed(1)}%`;
+      },
+    },
+  ];
+
+  const tagColumns: ColumnDef<Tag>[] = [
+    {
+      accessorKey: "name",
+      header: "Nome",
+      cell: ({ row }) => row.original.name,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -113,12 +263,15 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
               <CardTitle>Nova conta</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form className="grid gap-4 md:grid-cols-2" action={createAccount}>
+              <form
+                className="grid gap-4 md:grid-cols-2"
+                action={createAccount}
+              >
                 <div className="space-y-2">
                   <Label htmlFor="account-name">Nome</Label>
                   <Input id="account-name" name="name" required />
                 </div>
-                <SelectField name="type" label="Tipo" options={accountTypeOptions} />
+                <SelectField name="type" label="Tipo" options={accountTypeOptions} defaultValue="checking" />
                 <SelectField name="currency" label="Moeda" options={currencyOptions} defaultValue="BRL" />
                 <div className="space-y-2">
                   <Label htmlFor="account-initial">Saldo inicial</Label>
@@ -128,26 +281,7 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
                   <Button type="submit">Salvar conta</Button>
                 </div>
               </form>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Moeda</TableHead>
-                    <TableHead>Saldo inicial</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accounts.map((account) => (
-                    <TableRow key={account.id}>
-                      <TableCell>{account.name}</TableCell>
-                      <TableCell>{account.type}</TableCell>
-                      <TableCell>{account.currency}</TableCell>
-                      <TableCell>{Number(account.initial_balance).toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable columns={accountColumns} data={accounts} emptyMessage="Nenhuma conta encontrada." />
             </CardContent>
           </Card>
         </TabsContent>
@@ -166,20 +300,7 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
                   <Button type="submit">Salvar categoria</Button>
                 </div>
               </form>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell>{category.name}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable columns={categoryColumns} data={categories} emptyMessage="Nenhuma categoria encontrada." />
             </CardContent>
           </Card>
         </TabsContent>
@@ -220,45 +341,7 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
                   <Button type="submit">Salvar cartão</Button>
                 </div>
               </form>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Conta</TableHead>
-                    <TableHead>Fechamento</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Limite</TableHead>
-                    <TableHead>Fatura atual</TableHead>
-                    <TableHead>Uso do limite</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cards.map((card) => {
-                    const statement = statementByCard.get(card.id);
-                    const total = statement?.total ?? 0;
-                    const usage = card.limit_amount > 0 ? (total / card.limit_amount) * 100 : 0;
-                    return (
-                      <TableRow key={card.id}>
-                        <TableCell>{card.name}</TableCell>
-                        <TableCell>{card.account_id ? accountMap.get(card.account_id) : "-"}</TableCell>
-                        <TableCell>{card.closing_day}</TableCell>
-                        <TableCell>{card.due_day}</TableCell>
-                        <TableCell>{formatCurrency(card.limit_amount)}</TableCell>
-                        <TableCell>
-                          {formatCurrency(total)}
-                          {statement && (
-                            <span className="block text-xs text-muted-foreground">
-                              {statement.window.startLabel} → {statement.window.endLabel} • Vence em{" "}
-                              {toDateString(statement.dueDate)}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>{usage.toFixed(1)}%</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <DataTable columns={cardColumns} data={cards} emptyMessage="Nenhum cartão encontrado." />
               <div className="border-t pt-6">
                 <h3 className="text-sm font-semibold">Pagamento de fatura</h3>
                 <p className="text-sm text-muted-foreground">
@@ -273,7 +356,11 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="card-payment-date">Data</Label>
-                    <Input id="card-payment-date" name="occurred_on" type="date" defaultValue={todayLabel} />
+                    <DatePickerField
+                      id="card-payment-date"
+                      name="occurred_on"
+                      defaultValue={todayLabel}
+                    />
                   </div>
                   <div className="md:col-span-4">
                     <Button type="submit">Pagar fatura</Button>
@@ -298,20 +385,7 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
                   <Button type="submit">Salvar tag</Button>
                 </div>
               </form>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tags.map((tag) => (
-                    <TableRow key={tag.id}>
-                      <TableCell>{tag.name}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable columns={tagColumns} data={tags} emptyMessage="Nenhuma tag encontrada." />
             </CardContent>
           </Card>
         </TabsContent>

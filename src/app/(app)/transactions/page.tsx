@@ -7,11 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function TransactionsPage() {
   const { supabase } = await requireUser();
 
-  const [accounts, categories, cards, transactionTypes, tags, transactions] = await Promise.all([
+  const [accounts, categories, cards, tags, transactions] = await Promise.all([
     supabase.from("accounts").select("*").order("created_at"),
     supabase.from("categories").select("*").order("created_at"),
     supabase.from("cards").select("*").order("created_at"),
-    supabase.from("transaction_types").select("*").order("created_at"),
     supabase.from("tags").select("*").order("created_at"),
     supabase.from("transactions").select("*").order("occurred_on", { ascending: false }).limit(50),
   ]);
@@ -21,7 +20,6 @@ export default async function TransactionsPage() {
       accounts={accounts.data ?? []}
       categories={categories.data ?? []}
       cards={cards.data ?? []}
-      transactionTypes={transactionTypes.data ?? []}
       tags={tags.data ?? []}
       transactions={transactions.data ?? []}
     />

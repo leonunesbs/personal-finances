@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 
 import { upsertBudgetItem, upsertMonthlyBudget } from "@/app/(app)/budgets/actions";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { SelectField } from "@/components/forms/select-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatCurrency, formatCurrencyValue, parseAmount } from "@/lib/finance";
 
 type Category = {
   id: string;
@@ -46,7 +49,12 @@ type BudgetsClientProps = {
 };
 
 export function BudgetsClient({ month, categories, budget, budgetItems, transactions }: BudgetsClientProps) {
+  const router = useRouter();
+  const [isSavingCategory, startCategoryTransition] = useTransition();
   const monthValue = month.slice(0, 7);
+  const [incomeTargetValue, setIncomeTargetValue] = useState<string>("");
+  const [investmentPercentValue, setInvestmentPercentValue] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(monthValue);
 
   const categoryOptions = useMemo(
     () => categories.map((category) => ({ value: category.id, label: category.name })),
@@ -62,10 +70,104 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
     });
     return totals;
   }, [transactions]);
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category.name])),
+    [categories]
+  );
 
   const currentItems = budget
     ? budgetItems.filter((item) => item.monthly_budget_id === budget.id)
     : [];
+
+  const investmentPercent = useMemo(() => {
+    if (!investmentPercentValue) return 0;
+    const normalized = investmentPercentValue.replace(",", ".").replace(/[^0-9.-]/g, "");
+    const parsed = Number.parseFloat(normalized);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.min(Math.max(parsed, 0), 100);
+  }, [investmentPercentValue]);
+
+  const incomeTargetAmount = useMemo(
+    () => parseAmount(incomeTargetValue),
+    [incomeTargetValue]
+  );
+
+  const investmentTargetAmount = useMemo(
+    () => incomeTargetAmount * (investmentPercent / 100),
+    [incomeTargetAmount, investmentPercent]
+  );
+
+  const expenseLimitAmount = useMemo(
+    () => Math.max(incomeTargetAmount - investmentTargetAmount, 0),
+    [incomeTargetAmount, investmentTargetAmount]
+  );
+
+  useEffect(() => {
+    setIncomeTargetValue(formatCurrencyValue(budget?.income_target ?? ""));
+    const incomeTarget = Number(budget?.income_target ?? 0);
+    const investmentTarget = Number(budget?.investment_target ?? 0);
+    if (!incomeTarget) {
+      setInvestmentPercentValue("");
+      return;
+    }
+    const percent = (investmentTarget / incomeTarget) * 100;
+    if (!Number.isFinite(percent) || percent <= 0) {
+      setInvestmentPercentValue("0");
+      return;
+    }
+    setInvestmentPercentValue(percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(2));
+  }, [budget?.income_target, budget?.investment_target]);
+
+  useEffect(() => {
+    setSelectedMonth(monthValue);
+  }, [monthValue]);
+
+  const columns = useMemo<ColumnDef<BudgetItem>[]>(
+    () => [
+      {
+        id: "category",
+        header: "Categoria",
+        cell: ({ row }) =>
+          row.original.category_id
+            ? categoryNameById.get(row.original.category_id)
+            : "-",
+      },
+      {
+        accessorKey: "amount_limit",
+        header: "Limite",
+        cell: ({ row }) => formatCurrency(row.original.amount_limit ?? 0),
+      },
+      {
+        id: "spent",
+        header: "Gasto",
+        cell: ({ row }) => {
+          const spent = row.original.category_id
+            ? expenseByCategory.get(row.original.category_id) ?? 0
+            : 0;
+          return formatCurrency(spent);
+        },
+      },
+      {
+        id: "available",
+        header: "Disponível",
+        cell: ({ row }) => {
+          const spent = row.original.category_id
+            ? expenseByCategory.get(row.original.category_id) ?? 0
+            : 0;
+          const available = Number(row.original.amount_limit ?? 0) - spent;
+          return formatCurrency(available);
+        },
+      },
+    ],
+    [categoryNameById, expenseByCategory]
+  );
+
+  const handleUpsertBudgetItem = (formData: FormData) => {
+    startCategoryTransition(async () => {
+      await upsertBudgetItem(formData);
+      router.refresh();
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -81,19 +183,51 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
           <form className="grid gap-4 md:grid-cols-2" action={upsertMonthlyBudget}>
             <div className="space-y-2">
               <Label htmlFor="month">Mês</Label>
-              <Input id="month" name="month" type="month" defaultValue={monthValue} required />
+              <Input
+                id="month"
+                name="month"
+                type="month"
+                value={selectedMonth}
+                onChange={(event) => {
+                  const nextMonth = event.target.value;
+                  setSelectedMonth(nextMonth);
+                  if (nextMonth) {
+                    router.push(`/budgets?month=${nextMonth}`);
+                  }
+                }}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="income_target">Meta de receita</Label>
-              <CurrencyInput id="income_target" name="income_target" />
+              <CurrencyInput
+                id="income_target"
+                name="income_target"
+                value={incomeTargetValue}
+                onValueChange={setIncomeTargetValue}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="expense_limit">Limite de despesa</Label>
-              <CurrencyInput id="expense_limit" name="expense_limit" />
+              <Label htmlFor="investment_percent">Meta de investimento (%)</Label>
+              <Input
+                id="investment_percent"
+                name="investment_percent"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={100}
+                step="0.01"
+                value={investmentPercentValue}
+                onChange={(event) => setInvestmentPercentValue(event.target.value)}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="investment_target">Meta de investimento</Label>
-              <CurrencyInput id="investment_target" name="investment_target" />
+              <Label htmlFor="expense_limit_display">Limite de despesa</Label>
+              <Input
+                id="expense_limit_display"
+                value={formatCurrencyValue(expenseLimitAmount)}
+                readOnly
+              />
             </div>
             <div className="md:col-span-2">
               <Button type="submit">Salvar metas</Button>
@@ -106,7 +240,7 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
           <CardTitle>Orçamento por categoria</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form className="grid gap-4 md:grid-cols-3" action={upsertBudgetItem}>
+          <form className="grid gap-4 md:grid-cols-3" action={handleUpsertBudgetItem}>
             <input type="hidden" name="month" value={monthValue} />
             <SelectField name="category_id" label="Categoria" options={categoryOptions} />
             <div className="space-y-2">
@@ -114,34 +248,12 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
               <CurrencyInput id="amount_limit" name="amount_limit" />
             </div>
             <div className="md:col-span-3">
-              <Button type="submit">Salvar limite</Button>
+              <Button type="submit" disabled={isSavingCategory}>
+                {isSavingCategory ? "Salvando..." : "Salvar limite"}
+              </Button>
             </div>
           </form>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Limite</TableHead>
-                <TableHead>Gasto</TableHead>
-                <TableHead>Disponível</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {currentItems.map((item) => {
-                const spent = item.category_id ? expenseByCategory.get(item.category_id) ?? 0 : 0;
-                const available = Number(item.amount_limit ?? 0) - spent;
-                const categoryName = categories.find((category) => category.id === item.category_id)?.name ?? "-";
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>{categoryName}</TableCell>
-                    <TableCell>{Number(item.amount_limit ?? 0).toFixed(2)}</TableCell>
-                    <TableCell>{spent.toFixed(2)}</TableCell>
-                    <TableCell>{available.toFixed(2)}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <DataTable columns={columns} data={currentItems} emptyMessage="Nenhum orçamento encontrado." />
         </CardContent>
       </Card>
     </div>

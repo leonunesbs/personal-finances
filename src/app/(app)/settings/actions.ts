@@ -13,13 +13,31 @@ function getText(formData: FormData, key: string) {
 export async function createAccount(formData: FormData) {
   const { supabase, user } = await requireUser();
   const name = getText(formData, "name");
-  const type = getText(formData, "type");
+  const type = getText(formData, "type") || "checking";
   const currency = getText(formData, "currency") || "BRL";
   const initialBalance = parseAmount(formData.get("initial_balance"));
 
-  if (!name || !type) return;
+  if (!name || !type) {
+    return;
+  }
 
-  await supabase.from("accounts").insert({
+  const profileByUserId = await supabase
+    .from("user_profiles")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!profileByUserId.data) {
+    const { error: profileError } = await supabase.from("user_profiles").insert({
+      user_id: user.id,
+      currency: currency || "BRL",
+    });
+    if (profileError) {
+      return;
+    }
+  }
+
+  const { error } = await supabase.from("accounts").insert({
     user_id: user.id,
     name,
     type,
@@ -96,22 +114,6 @@ export async function createCardPayment(formData: FormData) {
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/budgets");
-}
-
-export async function createTransactionType(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const name = getText(formData, "name");
-  const kind = getText(formData, "kind");
-
-  if (!name || !kind) return;
-
-  await supabase.from("transaction_types").insert({
-    user_id: user.id,
-    name,
-    kind,
-  });
-
-  revalidatePath("/settings");
 }
 
 export async function createTag(formData: FormData) {

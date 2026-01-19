@@ -24,12 +24,22 @@ function normalizeMonth(value: string) {
   return value;
 }
 
+function parsePercent(value: string) {
+  if (!value) return 0;
+  const normalized = value.replace(",", ".").replace(/[^0-9.-]/g, "");
+  if (!normalized) return 0;
+  const parsed = Number.parseFloat(normalized);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(Math.max(parsed, 0), 100);
+}
+
 export async function upsertMonthlyBudget(formData: FormData) {
   const { supabase, user } = await requireUser();
   const month = normalizeMonth(getText(formData, "month"));
   const incomeTarget = parseAmount(formData.get("income_target"));
-  const expenseLimit = parseAmount(formData.get("expense_limit"));
-  const investmentTarget = parseAmount(formData.get("investment_target"));
+  const investmentPercent = parsePercent(getText(formData, "investment_percent"));
+  const investmentTarget = incomeTarget * (investmentPercent / 100);
+  const expenseLimit = Math.max(incomeTarget - investmentTarget, 0);
 
   if (!month) return;
 
@@ -63,22 +73,25 @@ export async function upsertBudgetItem(formData: FormData) {
     .eq("month", month)
     .maybeSingle();
 
-  const budgetId = budget?.id ?? (
-    await supabase
+  let resolvedBudgetId = budget?.id;
+
+  if (!resolvedBudgetId) {
+    const { data: insertedBudget } = await supabase
       .from("monthly_budgets")
       .insert({
         user_id: user.id,
         month,
       })
       .select("id")
-      .single()
-  ).data?.id;
+      .single();
+    resolvedBudgetId = insertedBudget?.id;
+  }
 
-  if (!budgetId) return;
+  if (!resolvedBudgetId) return;
 
   await supabase.from("budget_items").upsert(
     {
-      monthly_budget_id: budgetId,
+      monthly_budget_id: resolvedBudgetId,
       category_id: categoryId,
       amount_limit: amountLimit,
     },
