@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
-import { upsertBudgetItem, upsertMonthlyBudget } from "@/app/(app)/budgets/actions";
+import { copyPreviousMonthBudgetItems, upsertBudgetItem, upsertMonthlyBudget } from "@/app/(app)/budgets/actions";
 import { CurrencyInput } from "@/components/forms/currency-input";
+import { MonthPickerField } from "@/components/forms/month-picker-field";
 import { SelectField } from "@/components/forms/select-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatCurrencyValue, parseAmount } from "@/lib/finance";
 
 type Category = {
@@ -46,15 +48,28 @@ type BudgetsClientProps = {
   budget: Budget | null;
   budgetItems: BudgetItem[];
   transactions: Transaction[];
+  canCopyPrevious: boolean;
+  yearBudgets: Budget[];
 };
 
-export function BudgetsClient({ month, categories, budget, budgetItems, transactions }: BudgetsClientProps) {
+export function BudgetsClient({
+  month,
+  categories,
+  budget,
+  budgetItems,
+  transactions,
+  canCopyPrevious,
+  yearBudgets,
+}: BudgetsClientProps) {
   const router = useRouter();
   const [isSavingCategory, startCategoryTransition] = useTransition();
+  const [isCopying, startCopyTransition] = useTransition();
   const monthValue = month.slice(0, 7);
   const [incomeTargetValue, setIncomeTargetValue] = useState<string>("");
   const [investmentPercentValue, setInvestmentPercentValue] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(monthValue);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [amountLimitValue, setAmountLimitValue] = useState<string>("");
 
   const categoryOptions = useMemo(
     () => categories.map((category) => ({ value: category.id, label: category.name })),
@@ -75,9 +90,7 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
     [categories]
   );
 
-  const currentItems = budget
-    ? budgetItems.filter((item) => item.monthly_budget_id === budget.id)
-    : [];
+  const currentItems = budget ? budgetItems : [];
 
   const investmentPercent = useMemo(() => {
     if (!investmentPercentValue) return 0;
@@ -120,7 +133,25 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
 
   useEffect(() => {
     setSelectedMonth(monthValue);
+    setSelectedCategoryId("");
+    setAmountLimitValue("");
   }, [monthValue]);
+
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setAmountLimitValue("");
+      return;
+    }
+    const currentItem = currentItems.find((item) => item.category_id === selectedCategoryId);
+    setAmountLimitValue(formatCurrencyValue(currentItem?.amount_limit ?? ""));
+  }, [currentItems, selectedCategoryId]);
+
+  const handleMonthChange = (nextMonth: string) => {
+    setSelectedMonth(nextMonth);
+    if (nextMonth) {
+      router.push(`/budgets?month=${nextMonth}`);
+    }
+  };
 
   const columns = useMemo<ColumnDef<BudgetItem>[]>(
     () => [
@@ -169,6 +200,13 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
     });
   };
 
+  const formatMonthLabel = (value: string) => {
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return value;
+    const label = parsed.toLocaleDateString("pt-BR", { month: "long" });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -180,21 +218,17 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
           <CardTitle>Orçamento do mês</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 md:grid-cols-2" action={upsertMonthlyBudget}>
+          <form
+            className="grid gap-4 md:grid-cols-2"
+            action={upsertMonthlyBudget}
+          >
             <div className="space-y-2">
               <Label htmlFor="month">Mês</Label>
-              <Input
+              <MonthPickerField
                 id="month"
                 name="month"
-                type="month"
                 value={selectedMonth}
-                onChange={(event) => {
-                  const nextMonth = event.target.value;
-                  setSelectedMonth(nextMonth);
-                  if (nextMonth) {
-                    router.push(`/budgets?month=${nextMonth}`);
-                  }
-                }}
+                onValueChange={handleMonthChange}
                 required
               />
             </div>
@@ -222,6 +256,14 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="investment_target_display">Meta de investimento (valor)</Label>
+              <Input
+                id="investment_target_display"
+                value={formatCurrencyValue(investmentTargetAmount)}
+                readOnly
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="expense_limit_display">Limite de despesa</Label>
               <Input
                 id="expense_limit_display"
@@ -237,19 +279,89 @@ export function BudgetsClient({ month, categories, budget, budgetItems, transact
       </Card>
       <Card>
         <CardHeader>
+          <CardTitle>Orçamentos do ano vigente</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {yearBudgets.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mês</TableHead>
+                  <TableHead>Meta de receita</TableHead>
+                  <TableHead>Meta de investimento</TableHead>
+                  <TableHead>Limite de despesa</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {yearBudgets.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{formatMonthLabel(item.month)}</TableCell>
+                    <TableCell>{formatCurrency(item.income_target ?? 0)}</TableCell>
+                    <TableCell>{formatCurrency(item.investment_target ?? 0)}</TableCell>
+                    <TableCell>{formatCurrency(item.expense_limit ?? 0)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum orçamento definido no ano vigente.</p>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
           <CardTitle>Orçamento por categoria</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form className="grid gap-4 md:grid-cols-3" action={handleUpsertBudgetItem}>
-            <input type="hidden" name="month" value={monthValue} />
-            <SelectField name="category_id" label="Categoria" options={categoryOptions} />
+          <form
+            className="grid gap-4 md:grid-cols-3"
+            action={handleUpsertBudgetItem}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="category_month">Mês de referência</Label>
+              <MonthPickerField
+                id="category_month"
+                name="month"
+                value={selectedMonth}
+                onValueChange={handleMonthChange}
+                required
+              />
+            </div>
+            <SelectField
+              name="category_id"
+              label="Categoria"
+              options={categoryOptions}
+              value={selectedCategoryId}
+              onValueChange={setSelectedCategoryId}
+            />
             <div className="space-y-2">
               <Label htmlFor="amount_limit">Limite</Label>
-              <CurrencyInput id="amount_limit" name="amount_limit" />
+              <CurrencyInput
+                id="amount_limit"
+                name="amount_limit"
+                value={amountLimitValue}
+                onValueChange={setAmountLimitValue}
+              />
             </div>
-            <div className="md:col-span-3">
-              <Button type="submit" disabled={isSavingCategory}>
+            <div className="md:col-span-3 flex flex-wrap gap-2">
+              <Button
+                type="submit"
+                disabled={isSavingCategory}
+              >
                 {isSavingCategory ? "Salvando..." : "Salvar limite"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isCopying || !canCopyPrevious || !selectedMonth}
+                onClick={() => {
+                  startCopyTransition(async () => {
+                    await copyPreviousMonthBudgetItems(selectedMonth);
+                    router.refresh();
+                  });
+                }}
+              >
+                {isCopying ? "Copiando..." : "Copiar mês anterior"}
               </Button>
             </div>
           </form>

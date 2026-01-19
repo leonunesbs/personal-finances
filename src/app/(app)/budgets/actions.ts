@@ -24,6 +24,17 @@ function normalizeMonth(value: string) {
   return value;
 }
 
+function parseMonth(value: string) {
+  if (!value) return null;
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatMonth(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-01`;
+}
+
 function parsePercent(value: string) {
   if (!value) return 0;
   const normalized = value.replace(",", ".").replace(/[^0-9.-]/g, "");
@@ -97,6 +108,74 @@ export async function upsertBudgetItem(formData: FormData) {
     },
     { onConflict: "monthly_budget_id,category_id" }
   );
+
+  revalidatePath("/budgets");
+  revalidatePath("/dashboard");
+}
+
+export async function copyPreviousMonthBudgetItems(monthValue: string) {
+  const { supabase, user } = await requireUser();
+  const month = normalizeMonth(monthValue);
+  const parsedMonth = parseMonth(month);
+
+  if (!month || !parsedMonth) return;
+
+  const previousMonth = new Date(parsedMonth);
+  previousMonth.setMonth(previousMonth.getMonth() - 1);
+  const previousMonthLabel = formatMonth(previousMonth);
+
+  const { data: previousBudget } = await supabase
+    .from("monthly_budgets")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("month", previousMonthLabel)
+    .maybeSingle();
+
+  if (!previousBudget?.id) return;
+
+  const { data: previousItems } = await supabase
+    .from("budget_items")
+    .select("category_id, amount_limit")
+    .eq("monthly_budget_id", previousBudget.id);
+
+  if (!previousItems || previousItems.length === 0) return;
+
+  const { data: currentBudget } = await supabase
+    .from("monthly_budgets")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("month", month)
+    .maybeSingle();
+
+  let resolvedBudgetId = currentBudget?.id;
+
+  if (!resolvedBudgetId) {
+    const { data: insertedBudget } = await supabase
+      .from("monthly_budgets")
+      .insert({
+        user_id: user.id,
+        month,
+      })
+      .select("id")
+      .single();
+    resolvedBudgetId = insertedBudget?.id;
+  }
+
+  if (!resolvedBudgetId) return;
+
+  const itemsToUpsert = previousItems
+    .filter((item) => Boolean(item.category_id))
+    .map((item) => ({
+      monthly_budget_id: resolvedBudgetId,
+      category_id: item.category_id,
+      amount_limit: item.amount_limit ?? 0,
+    }));
+
+  if (itemsToUpsert.length === 0) return;
+
+  await supabase.from("budget_items").upsert(itemsToUpsert, {
+    onConflict: "monthly_budget_id,category_id",
+  });
 
   revalidatePath("/budgets");
   revalidatePath("/dashboard");
