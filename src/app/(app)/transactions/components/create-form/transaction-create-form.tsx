@@ -24,10 +24,11 @@ type TransactionCreateFormProps = {
   categories: Category[];
   cards: CardItem[];
   tags: Tag[];
+  onSuccess?: () => void;
 };
 
 export function TransactionCreateForm(props: TransactionCreateFormProps) {
-  const { accounts, categories, cards, tags } = props;
+  const { accounts, categories, cards, tags, onSuccess } = props;
 
   const {
     form,
@@ -48,7 +49,7 @@ export function TransactionCreateForm(props: TransactionCreateFormProps) {
     isToAccountCreditSelected,
     filteredToCardOptions,
     shouldShowToCard,
-  } = useTransactionForm({ accounts, cards });
+  } = useTransactionForm({ accounts, cards, onSuccess });
 
   const accountOptions = accounts.map((account) => ({ value: account.id, label: account.name }));
   const categoryOptions = categories.map((category) => ({ value: category.id, label: category.name }));

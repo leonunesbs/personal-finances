@@ -14,9 +14,10 @@ import type { Account, CardItem } from '../../types';
 type UseTransactionFormProps = {
   accounts: Account[];
   cards: CardItem[];
+  onSuccess?: () => void;
 };
 
-export function useTransactionForm({ accounts, cards }: UseTransactionFormProps) {
+export function useTransactionForm({ accounts, cards, onSuccess }: UseTransactionFormProps) {
   const router = useRouter();
   const [isCreating, startCreating] = useTransition();
 
@@ -192,6 +193,7 @@ export function useTransactionForm({ accounts, cards }: UseTransactionFormProps)
         toast.success('Transação criada.');
         resetForm();
         router.refresh();
+        onSuccess?.();
       });
     },
     () => {
