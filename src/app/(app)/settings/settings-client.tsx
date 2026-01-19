@@ -140,14 +140,14 @@ const cardSchema = z.object({
     .string()
     .trim()
     .refine((value) => value === '' || /^\d{10,19}$/.test(value), 'Informe o número completo'),
-  closing_day: z.coerce.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
-  due_day: z.coerce.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
+  closing_day: z.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
+  due_day: z.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
   limit_amount: currencySchema,
 });
 
 const cardEditSchema = z.object({
-  closing_day: z.coerce.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
-  due_day: z.coerce.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
+  closing_day: z.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
+  due_day: z.number().int().min(1, 'Informe o dia').max(31, 'Dia inválido'),
   limit_amount: currencySchema,
 });
 
@@ -205,16 +205,16 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
       name: '',
       account_id: '',
       card_number: '',
-      closing_day: '',
-      due_day: '',
+      closing_day: 1,
+      due_day: 1,
       limit_amount: '',
     },
   });
   const cardEditForm = useForm<CardEditFormValues>({
     resolver: zodResolver(cardEditSchema),
     defaultValues: {
-      closing_day: '',
-      due_day: '',
+      closing_day: 1,
+      due_day: 1,
       limit_amount: '',
     },
   });
@@ -279,8 +279,8 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
       name: values.name,
       account_id: values.account_id,
       card_number: values.card_number,
-      closing_day: values.closing_day,
-      due_day: values.due_day,
+      closing_day: String(values.closing_day),
+      due_day: String(values.due_day),
       limit_amount: values.limit_amount,
     });
     await createCard(formData);
@@ -288,8 +288,8 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
       name: '',
       account_id: '',
       card_number: '',
-      closing_day: '',
-      due_day: '',
+      closing_day: 1,
+      due_day: 1,
       limit_amount: '',
     });
   });
@@ -304,8 +304,8 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
     });
     setEditingCardId(null);
     cardEditForm.reset({
-      closing_day: '',
-      due_day: '',
+      closing_day: 1,
+      due_day: 1,
       limit_amount: '',
     });
   });
@@ -674,8 +674,8 @@ export function SettingsClient({ accounts, categories, cards, tags, transactions
                 onClick={() => {
                   setEditingCardId(null);
                   cardEditForm.reset({
-                    closing_day: '',
-                    due_day: '',
+                    closing_day: 1,
+                    due_day: 1,
                     limit_amount: '',
                   });
                 }}
