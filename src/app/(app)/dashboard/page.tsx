@@ -129,7 +129,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const { data: budget } = await supabase
     .from('monthly_budgets')
-    .select('id, income_target, expense_limit, investment_target')
+    .select('id, income_target, expense_limit, investment_target, reserve_target')
     .eq('month', startLabel)
     .maybeSingle();
 
@@ -257,12 +257,30 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     if (item.kind === 'investment_withdrawal') totals.investmentWithdrawal += amount;
   });
 
+  const incomeTarget = Number(budget?.income_target ?? 0);
   const expenseLimit = Number(budget?.expense_limit ?? 0);
+  const investmentTarget = Number(budget?.investment_target ?? 0);
+  const reserveTarget = Number(budget?.reserve_target ?? 0);
+
   const remaining = Math.max(expenseLimit - totals.expense, 0);
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const remainingDays = Math.max(daysInMonth - now.getDate() + 1, 1);
   const dailyAllowance = remainingDays > 0 ? remaining / remainingDays : 0;
   const saved = totals.income - totals.expense - totals.investmentContribution;
+
+  // Budget progress calculations
+  const incomeProgress = incomeTarget > 0 ? Math.min((totals.income / incomeTarget) * 100, 100) : 0;
+  const expenseProgress = expenseLimit > 0 ? Math.min((totals.expense / expenseLimit) * 100, 100) : 0;
+  const investmentProgress =
+    investmentTarget > 0 ? Math.min((totals.investmentContribution / investmentTarget) * 100, 100) : 0;
+  const reserveProgress = reserveTarget > 0 ? Math.min((saved / reserveTarget) * 100, 100) : 0;
+
+  const incomeRemaining = Math.max(incomeTarget - totals.income, 0);
+  const expenseRemaining = Math.max(expenseLimit - totals.expense, 0);
+  const investmentRemaining = Math.max(investmentTarget - totals.investmentContribution, 0);
+  const reserveRemaining = Math.max(reserveTarget - saved, 0);
+
+  const hasBudget = incomeTarget > 0 || expenseLimit > 0 || investmentTarget > 0 || reserveTarget > 0;
 
   const today = new Date();
   const todayStart = new Date(today);
@@ -460,6 +478,138 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </CardHeader>
         </Card>
       </div>
+      {hasBudget && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Progresso do Orçamento</CardTitle>
+            <CardDescription>Acompanhe suas metas financeiras do mês</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {incomeTarget > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Meta de Receita</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(totals.income, 'BRL')} de {formatCurrency(incomeTarget, 'BRL')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-lg font-semibold ${incomeProgress >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}
+                    >
+                      {incomeProgress.toFixed(0)}%
+                    </p>
+                    {incomeRemaining > 0 && (
+                      <p className="text-xs text-muted-foreground">Faltam {formatCurrency(incomeRemaining, 'BRL')}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted">
+                  <div
+                    className={`h-2 rounded-full transition-all ${incomeProgress >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    style={{ width: `${incomeProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            {expenseLimit > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Limite de Despesas</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(totals.expense, 'BRL')} de {formatCurrency(expenseLimit, 'BRL')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-lg font-semibold ${expenseProgress <= 100 ? 'text-emerald-600' : 'text-rose-600'}`}
+                    >
+                      {expenseProgress.toFixed(0)}%
+                    </p>
+                    {expenseProgress <= 100 && expenseRemaining > 0 && (
+                      <p className="text-xs text-muted-foreground">Restam {formatCurrency(expenseRemaining, 'BRL')}</p>
+                    )}
+                    {expenseProgress > 100 && (
+                      <p className="text-xs text-rose-600">
+                        Excedeu em {formatCurrency(totals.expense - expenseLimit, 'BRL')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted">
+                  <div
+                    className={`h-2 rounded-full transition-all ${expenseProgress <= 100 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                    style={{ width: `${Math.min(expenseProgress, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            {investmentTarget > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Meta de Investimento</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(totals.investmentContribution, 'BRL')} de {formatCurrency(investmentTarget, 'BRL')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-lg font-semibold ${investmentProgress >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}
+                    >
+                      {investmentProgress.toFixed(0)}%
+                    </p>
+                    {investmentRemaining > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Faltam {formatCurrency(investmentRemaining, 'BRL')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted">
+                  <div
+                    className={`h-2 rounded-full transition-all ${investmentProgress >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    style={{ width: `${investmentProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            {reserveTarget > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Meta de Reserva</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(saved, 'BRL')} de {formatCurrency(reserveTarget, 'BRL')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-lg font-semibold ${reserveProgress >= 100 ? 'text-emerald-600' : saved >= 0 ? 'text-amber-600' : 'text-rose-600'}`}
+                    >
+                      {reserveProgress.toFixed(0)}%
+                    </p>
+                    {saved >= 0 && reserveRemaining > 0 && (
+                      <p className="text-xs text-muted-foreground">Faltam {formatCurrency(reserveRemaining, 'BRL')}</p>
+                    )}
+                    {saved < 0 && (
+                      <p className="text-xs text-rose-600">Déficit de {formatCurrency(Math.abs(saved), 'BRL')}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted">
+                  <div
+                    className={`h-2 rounded-full transition-all ${reserveProgress >= 100 ? 'bg-emerald-500' : saved >= 0 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                    style={{ width: `${Math.min(Math.max(reserveProgress, 0), 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -490,43 +640,61 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </Card>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Comprometimento do orçamento</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p
-              className={
-                budgetCommitment <= 1
-                  ? 'text-2xl font-semibold text-emerald-600'
-                  : 'text-2xl font-semibold text-rose-600'
-              }
-            >
-              {expenseLimit > 0 ? `${(budgetCommitment * 100).toFixed(1)}%` : 'Sem limite definido'}
-            </p>
-            {expenseLimit > 0 && (
-              <div className="h-2 w-full rounded-full bg-muted">
-                <div
-                  className={budgetCommitment <= 1 ? 'h-2 rounded-full bg-emerald-500' : 'h-2 rounded-full bg-rose-500'}
-                  style={{ width: `${Math.min(budgetCommitment * 100, 100)}%` }}
-                />
+        {hasBudget && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumo do Orçamento</CardTitle>
+              <CardDescription>Visão geral das suas metas financeiras</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {incomeTarget > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Receita planejada</p>
+                    <p className="text-lg font-semibold text-emerald-600">{formatCurrency(incomeTarget, 'BRL')}</p>
+                  </div>
+                )}
+                {expenseLimit > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Limite de gastos</p>
+                    <p className="text-lg font-semibold text-rose-600">{formatCurrency(expenseLimit, 'BRL')}</p>
+                  </div>
+                )}
+                {investmentTarget > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Meta de investimento</p>
+                    <p className="text-lg font-semibold text-blue-600">{formatCurrency(investmentTarget, 'BRL')}</p>
+                  </div>
+                )}
+                {reserveTarget > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Meta de reserva</p>
+                    <p className="text-lg font-semibold text-amber-600">{formatCurrency(reserveTarget, 'BRL')}</p>
+                  </div>
+                )}
               </div>
-            )}
-            <p className="text-sm">
-              {formatCurrency(totals.expense, 'BRL')} / {formatCurrency(expenseLimit, 'BRL')}
-            </p>
-          </CardContent>
-        </Card>
+              {(incomeTarget > 0 || expenseLimit > 0) && (
+                <div className="space-y-1 rounded-lg border bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground">Resultado esperado</p>
+                  <p className="text-lg font-semibold">
+                    {formatCurrency(incomeTarget - expenseLimit - investmentTarget, 'BRL')}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle>Categorias com maiores despesas</CardTitle>
+            <CardDescription>Top 5 categorias do mês</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {topCategories.length > 0 ? (
               topCategories.map((category) => (
                 <div key={category.id} className="flex items-center justify-between text-sm">
-                  <span>{category.name}</span>
-                  <span className="font-medium">{formatCurrency(category.total, 'BRL')}</span>
+                  <span className="truncate">{category.name}</span>
+                  <span className="ml-2 font-medium">{formatCurrency(category.total, 'BRL')}</span>
                 </div>
               ))
             ) : (
@@ -745,13 +913,33 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <Card>
         <CardHeader>
           <CardTitle>Economia do mês</CardTitle>
+          {reserveTarget > 0 && (
+            <CardDescription>
+              {saved >= reserveTarget
+                ? 'Meta de reserva atingida!'
+                : `Faltam ${formatCurrency(reserveRemaining, 'BRL')} para a meta`}
+            </CardDescription>
+          )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           <p
             className={saved >= 0 ? 'text-2xl font-semibold text-emerald-600' : 'text-2xl font-semibold text-rose-600'}
           >
             {formatCurrency(saved, 'BRL')}
           </p>
+          {reserveTarget > 0 && (
+            <>
+              <div className="h-2 w-full rounded-full bg-muted">
+                <div
+                  className={`h-2 rounded-full transition-all ${saved >= reserveTarget ? 'bg-emerald-500' : saved >= 0 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                  style={{ width: `${Math.min(Math.max(reserveProgress, 0), 100)}%` }}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {reserveProgress.toFixed(0)}% da meta de {formatCurrency(reserveTarget, 'BRL')}
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
       <Card>
