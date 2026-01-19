@@ -4,7 +4,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 
 import { createAccount, createCard, createCardPayment, createCategory, createTag } from "@/app/(app)/settings/actions";
 import { CurrencyInput } from "@/components/forms/currency-input";
-import { DatePickerField } from "@/components/forms/date-picker-field";
+import { MonthYearField } from "@/components/forms/month-year-field";
 import { SelectField } from "@/components/forms/select-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -356,7 +356,7 @@ export function SettingsClient({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="card-payment-date">Data</Label>
-                    <DatePickerField
+                    <MonthYearField
                       id="card-payment-date"
                       name="occurred_on"
                       defaultValue={todayLabel}
