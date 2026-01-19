@@ -10,10 +10,15 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "hugeicons",
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
-    "ui": "@/components/ui"
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
   },
-  "iconLibrary": "hugeicons"
+  "menuColor": "default",
+  "menuAccent": "subtle",
+  "registries": {}
 }
