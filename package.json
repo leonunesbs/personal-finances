@@ -86,7 +86,7 @@
     "baseline-browser-mapping": "2.9.15",
     "eslint": "9.39.2",
     "eslint-config-prettier": "10.1.8",
-    "eslint-import-resolver-typescript": "4.4.4",
+    "eslint-import-resolver-typescript": "4.4.5",
     "eslint-plugin-import-x": "4.16.1",
     "eslint-plugin-prettier": "5.5.5",
     "eslint-plugin-react": "7.37.5",
